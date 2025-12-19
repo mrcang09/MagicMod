@@ -14,6 +14,7 @@ public final class UiConfig {
     public final boolean replaceHud;
     public final boolean drawBackground;
     public final boolean replaceVanilla;
+    public final boolean shaderRender;
     public final List<String> matchTitles;
     public final Map<String, String> events;
     public final String openAnimation;
@@ -22,7 +23,7 @@ public final class UiConfig {
     public final List<UiElement> elements;
 
     private UiConfig(String id, String title, boolean allowMove, boolean overrideEsc, boolean hud, boolean replaceHud,
-                     boolean drawBackground, boolean replaceVanilla, List<String> matchTitles,
+                     boolean drawBackground, boolean replaceVanilla, boolean shaderRender, List<String> matchTitles,
                      Map<String, String> events, String openAnimation, Map<String, UiAnimation> animations,
                      UiBackground background, List<UiElement> elements) {
         this.id = id;
@@ -33,6 +34,7 @@ public final class UiConfig {
         this.replaceHud = replaceHud;
         this.drawBackground = drawBackground;
         this.replaceVanilla = replaceVanilla;
+        this.shaderRender = shaderRender;
         this.matchTitles = matchTitles;
         this.events = events;
         this.openAnimation = openAnimation;
@@ -50,6 +52,7 @@ public final class UiConfig {
         boolean drawBackground = getBoolean(root, "draw_background", !hud);
         boolean replaceHud = getBoolean(root, "replace_hud", hud);
         boolean replaceVanilla = getBoolean(root, "replace_vanilla", false);
+        boolean shaderRender = getBoolean(root, "shader_render", false);
         List<String> matchTitles = getStringList(root, "match_titles");
         Map<String, String> events = parseActions(getMap(root, "events"));
         String openAnimation = getString(root, "open_animation", null);
@@ -57,7 +60,7 @@ public final class UiConfig {
         UiBackground background = UiBackground.fromMap(getMap(root, "background"));
         List<UiElement> elements = parseElements(getList(root, "elements"));
         return new UiConfig(id, title, allowMove, overrideEsc, hud, replaceHud, drawBackground, replaceVanilla,
-            matchTitles, events, openAnimation, animations, background, elements);
+            shaderRender, matchTitles, events, openAnimation, animations, background, elements);
     }
 
     private static List<UiElement> parseElements(List<Object> rawElements) {
@@ -138,6 +141,7 @@ public final class UiConfig {
         int width;
         int height;
         UiAnchor anchor;
+        UiAnchorAxis anchorAxis;
         int z;
         boolean visible;
         Map<String, String> actions;
@@ -171,8 +175,8 @@ public final class UiConfig {
         int slotIndex;
         boolean hoverMask;
 
-        private UiElement(String id, Type type, UiValue x, UiValue y, int width, int height, UiAnchor anchor, int z,
-                          boolean visible, Map<String, String> actions,
+        private UiElement(String id, Type type, UiValue x, UiValue y, int width, int height, UiAnchor anchor,
+                          UiAnchorAxis anchorAxis, int z, boolean visible, Map<String, String> actions,
                           String text, float scale, boolean shadow, String align, int color, float opacity, String font, String texture,
                           int u, int v, int textureWidth, int textureHeight, int fillColor, int backgroundColor,
                           String mode, float value, float max, int durationMs, List<UiElement> children,
@@ -185,6 +189,7 @@ public final class UiConfig {
             this.width = width;
             this.height = height;
             this.anchor = anchor;
+            this.anchorAxis = anchorAxis;
             this.z = z;
             this.visible = visible;
             this.actions = actions;
@@ -223,6 +228,15 @@ public final class UiConfig {
             int width = getInt(map, "width", 0);
             int height = getInt(map, "height", 0);
             UiAnchor anchor = UiAnchor.from(map.get("anchor"));
+
+            // Support separate anchor_x and anchor_y for more flexible positioning
+            UiAnchorAxis anchorAxis;
+            if (map.containsKey("anchor_x") || map.containsKey("anchor_y")) {
+                anchorAxis = UiAnchorAxis.from(map.get("anchor_x"), map.get("anchor_y"));
+            } else {
+                anchorAxis = UiAnchorAxis.fromLegacy(anchor);
+            }
+
             int z = getInt(map, "z", 0);
             boolean visible = getBoolean(map, "visible", true);
             Map<String, String> actions = parseActions(getMap(map, "actions"));
@@ -255,7 +269,7 @@ public final class UiConfig {
             int slotIndex = getInt(map, "slot", -1);
             boolean hoverMask = getBoolean(map, "hover_mask", getBoolean(map, "slot_hover", false));
 
-            return new UiElement(id, type, x, y, width, height, anchor, z, visible, actions, text, scale, shadow, align,
+            return new UiElement(id, type, x, y, width, height, anchor, anchorAxis, z, visible, actions, text, scale, shadow, align,
                 color, opacity, font, texture, u, v, textureWidth, textureHeight, fillColor, backgroundColor, mode,
                 value, max, durationMs, children, scrollDirection, scrollStep, scrollX, scrollY, slotIndex, hoverMask);
         }

@@ -193,8 +193,8 @@ public class UiScreen extends Screen {
         int textWidth = Math.round(font.width(component) * scale);
         int textHeight = Math.round(font.lineHeight * scale);
         int alignedX = applyTextAlign(element.align, x, textWidth);
-        int drawX = element.anchor.applyX(alignedX, textWidth);
-        int drawY = element.anchor.applyY(y, textHeight);
+        int drawX = element.anchorAxis.applyX(alignedX, textWidth);
+        int drawY = element.anchorAxis.applyY(y, textHeight);
 
         guiGraphics.pose().pushMatrix();
         guiGraphics.pose().translate(drawX, drawY);
@@ -215,8 +215,8 @@ public class UiScreen extends Screen {
         if (texture == null) {
             return;
         }
-        int drawX = element.anchor.applyX(x, element.width);
-        int drawY = element.anchor.applyY(y, element.height);
+        int drawX = element.anchorAxis.applyX(x, element.width);
+        int drawY = element.anchorAxis.applyY(y, element.height);
         float effectiveAlpha = clampAlpha(alpha * element.opacity);
 
         if (element.texture.toLowerCase().endsWith(".gif")) {
@@ -236,8 +236,8 @@ public class UiScreen extends Screen {
         if (element.width <= 0 || element.height <= 0) {
             return;
         }
-        int drawX = element.anchor.applyX(x, element.width);
-        int drawY = element.anchor.applyY(y, element.height);
+        int drawX = element.anchorAxis.applyX(x, element.width);
+        int drawY = element.anchorAxis.applyY(y, element.height);
         guiGraphics.fill(drawX, drawY, drawX + element.width, drawY + element.height,
             applyAlpha(element.color, clampAlpha(alpha)));
     }
@@ -246,8 +246,8 @@ public class UiScreen extends Screen {
         if (element.width <= 0 || element.height <= 0) {
             return;
         }
-        int drawX = element.anchor.applyX(x, element.width);
-        int drawY = element.anchor.applyY(y, element.height);
+        int drawX = element.anchorAxis.applyX(x, element.width);
+        int drawY = element.anchorAxis.applyY(y, element.height);
         float clampedAlpha = clampAlpha(alpha);
         if (element.backgroundColor != 0) {
             guiGraphics.fill(drawX, drawY, drawX + element.width, drawY + element.height,
@@ -267,8 +267,8 @@ public class UiScreen extends Screen {
         if (element.width <= 0 || element.height <= 0) {
             return;
         }
-        int drawX = element.anchor.applyX(x, element.width);
-        int drawY = element.anchor.applyY(y, element.height);
+        int drawX = element.anchorAxis.applyX(x, element.width);
+        int drawY = element.anchorAxis.applyY(y, element.height);
         if (element.color != 0) {
             guiGraphics.fill(drawX, drawY, drawX + element.width, drawY + element.height,
                 applyAlpha(element.color, clampAlpha(alpha)));
@@ -295,8 +295,8 @@ public class UiScreen extends Screen {
         }
         int slotWidth = element.width > 0 ? element.width : 16;
         int slotHeight = element.height > 0 ? element.height : 16;
-        int drawX = element.anchor.applyX(x, slotWidth);
-        int drawY = element.anchor.applyY(y, slotHeight);
+        int drawX = element.anchorAxis.applyX(x, slotWidth);
+        int drawY = element.anchorAxis.applyY(y, slotHeight);
         boolean hovered = element.hoverMask
             && mouseX >= drawX && mouseX <= drawX + slotWidth
             && mouseY >= drawY && mouseY <= drawY + slotHeight;
@@ -361,8 +361,8 @@ public class UiScreen extends Screen {
             }
             int baseX = originX + Math.round(element.x.resolve(contextWidth, contextHeight, contextWidth) - scrollX);
             int baseY = originY + Math.round(element.y.resolve(contextWidth, contextHeight, contextHeight) - scrollY);
-            int drawX = element.anchor.applyX(baseX, element.width);
-            int drawY = element.anchor.applyY(baseY, element.height);
+            int drawX = element.anchorAxis.applyX(baseX, element.width);
+            int drawY = element.anchorAxis.applyY(baseY, element.height);
             ScrollState state = getScrollState(element);
 
             if (handleScroll(element.children, drawX, drawY, element.width, element.height, state.x, state.y,
@@ -456,8 +456,8 @@ public class UiScreen extends Screen {
                 int textWidth = Math.round(font.width(component) * scale);
                 int textHeight = Math.round(font.lineHeight * scale);
                 int alignedX = applyTextAlign(element.align, x, textWidth);
-                int drawX = element.anchor.applyX(alignedX, textWidth);
-                int drawY = element.anchor.applyY(y, textHeight);
+                int drawX = element.anchorAxis.applyX(alignedX, textWidth);
+                int drawY = element.anchorAxis.applyY(y, textHeight);
                 return new ElementBox(drawX, drawY, textWidth, textHeight);
             }
             case IMAGE, RECT, PROGRESS, SCROLL, SLOT -> {
@@ -466,8 +466,8 @@ public class UiScreen extends Screen {
                 if (width <= 0 || height <= 0) {
                     return null;
                 }
-                int drawX = element.anchor.applyX(x, width);
-                int drawY = element.anchor.applyY(y, height);
+                int drawX = element.anchorAxis.applyX(x, width);
+                int drawY = element.anchorAxis.applyY(y, height);
                 return new ElementBox(drawX, drawY, width, height);
             }
             default -> {

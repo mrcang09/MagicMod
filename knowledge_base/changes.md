@@ -27,3 +27,9 @@
 - Added HUD replacement support (`hud.yml`), HUD stat tokens, and JS helpers for player/target data.
 - Fixed `allow_move` to keep movement keybindings active while a UI is open.
 - Added element opacity for `text` and `image` plus UI animation definitions (`animations`, `open_animation`) and JS playback helpers.
+- Implemented GPU shader rendering system as an alternative to CPU rendering (`shader_render` config flag).
+- Added OpenGL VBO-based renderer (UiShaderRenderer) for batched vertex data and improved performance.
+- Created custom shaders (`ui_shader.vsh`, `ui_shader.fsh`) with MVP transformations computed in vertex shader.
+- Enhanced anchor system with separate `anchor_x` and `anchor_y` for independent horizontal/vertical positioning.
+- Added UiAnchorAxis class supporting fine-grained anchor control (left/center/right, top/center/bottom).
+- Created shader_demo.yml showcasing GPU rendering and flexible anchor positioning.

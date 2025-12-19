@@ -5,6 +5,7 @@ Top level:
 ```
 id: "magic_loading"
 title: "Magic Loading"
+shader_render: false
 background:
   color: "#0b0f14"
   gradient_to: "#162433"
@@ -18,6 +19,8 @@ elements:
     x: "50%"
     y: "18%"
     anchor: "center"
+    anchor_x: "center"
+    anchor_y: "top"
     color: "#f2c94c"
     scale: 2.4
     shadow: true
@@ -34,6 +37,7 @@ Top level:
 - `replace_hud`: boolean, optional; when true the HUD replaces the vanilla HUD layers.
 - `draw_background`: boolean, optional; when false skips drawing the UI background (useful for HUD).
 - `replace_vanilla`: boolean, optional; when true the UI replaces the vanilla container render.
+- `shader_render`: boolean, optional; when true uses GPU shader rendering instead of CPU rendering (default: false).
 - `match_titles`: list of strings, optional; when set, the overlay only applies if the screen title matches.
 - `events`: map of event keys to JS scripts (`open`, `close`, `esc`).
 - `open_animation`: string, optional; animation id to play when the UI opens.
@@ -52,7 +56,9 @@ Element common fields:
 - `type`: `text`, `image`, `rect`, `progress`, `scroll` (alias `scroll_list`).
 - `x`, `y`: number or percent string (e.g. `120`, `"50%"`).
 - `width`, `height`: int (used by `image`, `rect`, `progress`).
-- `anchor`: `top_left`, `top_center`, `top_right`, `center_left`, `center`, `center_right`, `bottom_left`, `bottom_center`, `bottom_right`.
+- `anchor`: `top_left`, `top_center`, `top_right`, `center_left`, `center`, `center_right`, `bottom_left`, `bottom_center`, `bottom_right` (legacy, combined anchor).
+- `anchor_x`: `left`, `center`, `right` (horizontal anchor, overrides `anchor` X-axis).
+- `anchor_y`: `top`, `center`, `bottom` (vertical anchor, overrides `anchor` Y-axis).
 - `z`: int for draw order (lower first).
 - `x`, `y`: number, percent string (e.g. `120`, `"50%"`), or expression like `0.5*w` / `0.5*h` where `w` and `h` are screen width/height.
 - `visible`: boolean (default `true`).

@@ -23,3 +23,12 @@
 21. Ensured movement keybindings stay active during `allow_move` screens by widening key conflict context.
 22. Added per-element opacity for `text`/`image`, UI animation definitions, and JS animation playback helpers.
 23. Updated `loading.yml` and UI schema docs with animation examples.
+24. Added GPU shader rendering system with VBO batching for improved performance.
+25. Created vertex shader (ui_shader.vsh) implementing MVP transformations and matrix operations.
+26. Created fragment shader (ui_shader.fsh) for texture sampling and color blending.
+27. Implemented UiShaderRenderer class for VBO management and shader invocation.
+28. Added `shader_render` boolean flag to UiConfig for toggling CPU/GPU rendering.
+29. Enhanced anchor system with separate `anchor_x` and `anchor_y` controls for flexible positioning.
+30. Created UiAnchorAxis class supporting independent horizontal (left/center/right) and vertical (top/center/bottom) anchors.
+31. Updated UiScreen to use anchorAxis for all element positioning.
+32. Created shader_demo.yml demonstrating shader rendering and enhanced anchor capabilities.
