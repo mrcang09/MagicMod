@@ -16,12 +16,15 @@ public final class UiConfig {
     public final boolean replaceVanilla;
     public final List<String> matchTitles;
     public final Map<String, String> events;
+    public final String openAnimation;
+    public final Map<String, UiAnimation> animations;
     public final UiBackground background;
     public final List<UiElement> elements;
 
     private UiConfig(String id, String title, boolean allowMove, boolean overrideEsc, boolean hud, boolean replaceHud,
                      boolean drawBackground, boolean replaceVanilla, List<String> matchTitles,
-                     Map<String, String> events, UiBackground background, List<UiElement> elements) {
+                     Map<String, String> events, String openAnimation, Map<String, UiAnimation> animations,
+                     UiBackground background, List<UiElement> elements) {
         this.id = id;
         this.title = title;
         this.allowMove = allowMove;
@@ -32,6 +35,8 @@ public final class UiConfig {
         this.replaceVanilla = replaceVanilla;
         this.matchTitles = matchTitles;
         this.events = events;
+        this.openAnimation = openAnimation;
+        this.animations = animations;
         this.background = background;
         this.elements = elements;
     }
@@ -47,10 +52,12 @@ public final class UiConfig {
         boolean replaceVanilla = getBoolean(root, "replace_vanilla", false);
         List<String> matchTitles = getStringList(root, "match_titles");
         Map<String, String> events = parseActions(getMap(root, "events"));
+        String openAnimation = getString(root, "open_animation", null);
+        Map<String, UiAnimation> animations = parseAnimations(getList(root, "animations"));
         UiBackground background = UiBackground.fromMap(getMap(root, "background"));
         List<UiElement> elements = parseElements(getList(root, "elements"));
         return new UiConfig(id, title, allowMove, overrideEsc, hud, replaceHud, drawBackground, replaceVanilla,
-            matchTitles, events, background, elements);
+            matchTitles, events, openAnimation, animations, background, elements);
     }
 
     private static List<UiElement> parseElements(List<Object> rawElements) {
@@ -67,6 +74,24 @@ public final class UiConfig {
         }
         elements.sort((left, right) -> Integer.compare(left.z, right.z));
         return elements;
+    }
+
+    private static Map<String, UiAnimation> parseAnimations(List<Object> rawAnimations) {
+        if (rawAnimations.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        Map<String, UiAnimation> animations = new java.util.HashMap<>();
+        for (Object rawAnimation : rawAnimations) {
+            if (rawAnimation instanceof Map<?, ?> map) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> animationMap = (Map<String, Object>) map;
+                UiAnimation animation = UiAnimation.fromMap(animationMap);
+                if (animation != null && animation.id != null && !animation.id.isBlank()) {
+                    animations.put(animation.id, animation);
+                }
+            }
+        }
+        return animations;
     }
 
     static final class UiBackground {
@@ -122,6 +147,7 @@ public final class UiConfig {
         boolean shadow;
         String align;
         int color;
+        float opacity;
         String font;
 
         String texture;
@@ -147,7 +173,7 @@ public final class UiConfig {
 
         private UiElement(String id, Type type, UiValue x, UiValue y, int width, int height, UiAnchor anchor, int z,
                           boolean visible, Map<String, String> actions,
-                          String text, float scale, boolean shadow, String align, int color, String font, String texture,
+                          String text, float scale, boolean shadow, String align, int color, float opacity, String font, String texture,
                           int u, int v, int textureWidth, int textureHeight, int fillColor, int backgroundColor,
                           String mode, float value, float max, int durationMs, List<UiElement> children,
                           String scrollDirection, float scrollStep, float scrollX, float scrollY, int slotIndex,
@@ -167,6 +193,7 @@ public final class UiConfig {
             this.shadow = shadow;
             this.align = align;
             this.color = color;
+            this.opacity = opacity;
             this.font = font;
             this.texture = texture;
             this.u = u;
@@ -205,6 +232,7 @@ public final class UiConfig {
             boolean shadow = getBoolean(map, "shadow", false);
             String align = getString(map, "align", "left");
             int color = parseColor(map.get("color"), 0xFFFFFFFF);
+            float opacity = getFloat(map, "opacity", 1.0f);
             String font = getString(map, "font", "original");
 
             String texture = getString(map, "texture", null);
@@ -228,8 +256,8 @@ public final class UiConfig {
             boolean hoverMask = getBoolean(map, "hover_mask", getBoolean(map, "slot_hover", false));
 
             return new UiElement(id, type, x, y, width, height, anchor, z, visible, actions, text, scale, shadow, align,
-                color, font, texture, u, v, textureWidth, textureHeight, fillColor, backgroundColor, mode, value, max,
-                durationMs, children, scrollDirection, scrollStep, scrollX, scrollY, slotIndex, hoverMask);
+                color, opacity, font, texture, u, v, textureWidth, textureHeight, fillColor, backgroundColor, mode,
+                value, max, durationMs, children, scrollDirection, scrollStep, scrollX, scrollY, slotIndex, hoverMask);
         }
 
         private static Type parseType(Object raw) {
@@ -245,6 +273,80 @@ public final class UiConfig {
             } catch (IllegalArgumentException ignored) {
                 return Type.RECT;
             }
+        }
+    }
+
+    static final class UiAnimation {
+        enum Target {
+            SCREEN,
+            ELEMENT
+        }
+
+        final String id;
+        final Target target;
+        final String elementId;
+        final int durationMs;
+        final boolean loop;
+        final float scaleFrom;
+        final float scaleTo;
+        final float alphaFrom;
+        final float alphaTo;
+        final float translateXFrom;
+        final float translateYFrom;
+        final float translateXTo;
+        final float translateYTo;
+        final float rotateFrom;
+        final float rotateTo;
+        final float pivotX;
+        final float pivotY;
+
+        private UiAnimation(String id, Target target, String elementId, int durationMs, boolean loop, float scaleFrom,
+                            float scaleTo, float alphaFrom, float alphaTo, float translateXFrom, float translateYFrom,
+                            float translateXTo, float translateYTo, float rotateFrom, float rotateTo,
+                            float pivotX, float pivotY) {
+            this.id = id;
+            this.target = target;
+            this.elementId = elementId;
+            this.durationMs = durationMs;
+            this.loop = loop;
+            this.scaleFrom = scaleFrom;
+            this.scaleTo = scaleTo;
+            this.alphaFrom = alphaFrom;
+            this.alphaTo = alphaTo;
+            this.translateXFrom = translateXFrom;
+            this.translateYFrom = translateYFrom;
+            this.translateXTo = translateXTo;
+            this.translateYTo = translateYTo;
+            this.rotateFrom = rotateFrom;
+            this.rotateTo = rotateTo;
+            this.pivotX = pivotX;
+            this.pivotY = pivotY;
+        }
+
+        static UiAnimation fromMap(Map<String, Object> map) {
+            if (map.isEmpty()) {
+                return null;
+            }
+            String id = getString(map, "id", "");
+            String targetRaw = getString(map, "target", "screen");
+            Target target = "screen".equalsIgnoreCase(targetRaw) ? Target.SCREEN : Target.ELEMENT;
+            String elementId = getString(map, "element", getString(map, "element_id", ""));
+            int durationMs = getInt(map, "duration_ms", 600);
+            boolean loop = getBoolean(map, "loop", false);
+            float scaleFrom = getFloat(map, "scale_from", 1.0f);
+            float scaleTo = getFloat(map, "scale_to", 1.0f);
+            float alphaFrom = getFloat(map, "alpha_from", 1.0f);
+            float alphaTo = getFloat(map, "alpha_to", 1.0f);
+            float translateXFrom = getFloat(map, "translate_x_from", 0.0f);
+            float translateYFrom = getFloat(map, "translate_y_from", 0.0f);
+            float translateXTo = getFloat(map, "translate_x_to", 0.0f);
+            float translateYTo = getFloat(map, "translate_y_to", 0.0f);
+            float rotateFrom = getFloat(map, "rotate_from", 0.0f);
+            float rotateTo = getFloat(map, "rotate_to", 0.0f);
+            float pivotX = getFloat(map, "pivot_x", 0.5f);
+            float pivotY = getFloat(map, "pivot_y", 0.5f);
+            return new UiAnimation(id, target, elementId, durationMs, loop, scaleFrom, scaleTo, alphaFrom, alphaTo,
+                translateXFrom, translateYFrom, translateXTo, translateYTo, rotateFrom, rotateTo, pivotX, pivotY);
         }
     }
 

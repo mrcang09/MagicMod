@@ -20,3 +20,6 @@
 18. Added hover actions, ESC override/movement options, and a JS setter for element properties.
 19. Added `esc.yml` and a pause-screen hook that only replaces ESC when the player is in-world.
 20. Added HUD overlay support, JS stat helpers, and a sample `hud.yml`.
+21. Ensured movement keybindings stay active during `allow_move` screens by widening key conflict context.
+22. Added per-element opacity for `text`/`image`, UI animation definitions, and JS animation playback helpers.
+23. Updated `loading.yml` and UI schema docs with animation examples.

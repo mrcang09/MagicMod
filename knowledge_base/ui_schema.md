@@ -36,6 +36,8 @@ Top level:
 - `replace_vanilla`: boolean, optional; when true the UI replaces the vanilla container render.
 - `match_titles`: list of strings, optional; when set, the overlay only applies if the screen title matches.
 - `events`: map of event keys to JS scripts (`open`, `close`, `esc`).
+- `open_animation`: string, optional; animation id to play when the UI opens.
+- `animations`: list of animation entries, optional.
 - `background`: map, optional.
 - `elements`: list, optional.
 
@@ -59,6 +61,7 @@ Element common fields:
 Text:
 - `text`: string.
 - `color`: hex string or int.
+- `opacity`: float 0..1 (optional).
 - `scale`: float (default `1.0`).
 - `shadow`: boolean.
 - `align`: `left`, `center`, `right` (optional).
@@ -69,6 +72,7 @@ Image:
 - `texture`: resource location string.
 - `u`, `v`: int texture offsets (default `0`).
 - `texture_width`, `texture_height`: int, default `256`.
+- `opacity`: float 0..1 (optional).
 - GIF: when `texture` ends with `.gif`, it will render animated frames.
 
 Rect:
@@ -100,8 +104,23 @@ Actions:
 - `shift_left_click`, `shift_right_click`, `shift_middle_click`
 - `enter`, `leave` (hover)
 
+Animations:
+- `id`: string, required.
+- `target`: `screen` or `element`.
+- `element` / `element_id`: element id (required when target is `element`).
+- `duration_ms`: int, default `600`.
+- `loop`: boolean, default `false`.
+- `scale_from`, `scale_to`: float scale range (default `1`).
+- `alpha_from`, `alpha_to`: float alpha range (default `1`).
+- `translate_x_from`, `translate_x_to`: float pixel offsets (default `0`).
+- `translate_y_from`, `translate_y_to`: float pixel offsets (default `0`).
+- `rotate_from`, `rotate_to`: float degrees (default `0`).
+- `pivot_x`, `pivot_y`: float 0..1 relative pivot (default `0.5`).
+
 Notes:
 - `match_titles` ignores color codes. Both `&` and `§` are accepted in the config.
 - `events.open` fires when the UI is initialized; `events.close` fires when it is closed.
 - Use `ui.set(id, property, value)` in scripts to change element properties at runtime.
 - Use `ui.create(parentId, element)` to dynamically create elements in JS (`parentId` optional).
+- Use `ui.playAnimation(id)` or `ui.playAnimation(id, elementId)` to play animations.
+- Use `ui.stopAnimation(id)` to stop them.

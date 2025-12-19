@@ -1,6 +1,17 @@
 id: "magic_loading"
 title: "Magic Loading"
 allow_move: true
+open_animation: "open_scale"
+animations:
+  - id: "open_scale"
+    target: "screen"
+    duration_ms: 650
+    scale_from: 0.1
+    scale_to: 1.0
+    alpha_from: 0.0
+    alpha_to: 1.0
+    pivot_x: 0.5
+    pivot_y: 0.5
 background:
   color: "#0b0f14"
   gradient_to: "#162433"
@@ -38,6 +49,7 @@ elements:
     texture_height: 16
     anchor: "center"
     z: 5
+    opacity: 0.9
     actions:
       left_click: "ui.toggle('log_list')"
       right_click: "ui.open('loading.yml')"

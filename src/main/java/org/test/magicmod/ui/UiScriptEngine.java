@@ -78,6 +78,18 @@ public final class UiScriptEngine {
             Minecraft.getInstance().setScreen(null);
         }
 
+        public boolean playAnimation(String animationId) {
+            return screen.playAnimation(animationId);
+        }
+
+        public boolean playAnimation(String animationId, String elementId) {
+            return screen.playAnimation(animationId, elementId);
+        }
+
+        public void stopAnimation(String animationId) {
+            screen.stopAnimation(animationId);
+        }
+
         public void playMusic(String soundId) {
             AudioController.playMusic(soundId, 1.0f, false, 0);
         }

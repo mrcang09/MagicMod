@@ -5,9 +5,13 @@ import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.ARGB;
 import net.minecraft.world.item.ItemStack;
+import net.minecraftforge.client.settings.IKeyConflictContext;
+import net.minecraftforge.client.settings.KeyConflictContext;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -22,11 +26,15 @@ public class UiScreen extends Screen {
     private final Map<String, UiConfig.UiElement> elementById;
     private final Map<UiConfig.UiElement, Boolean> visibilityOverrides = new IdentityHashMap<>();
     private final Map<UiConfig.UiElement, ScrollState> scrollStates = new IdentityHashMap<>();
+    private final Map<KeyMapping, IKeyConflictContext> movementConflictContexts = new IdentityHashMap<>();
+    private final List<ActiveAnimation> activeAnimations = new ArrayList<>();
     private final long startTimeMs;
+    private final Map<String, UiConfig.UiAnimation> animationById;
     private SlotProvider slotProvider;
     private boolean overlayMode;
     private boolean openEventFired;
     private boolean closeEventFired;
+    private boolean movementContextPatched;
     private UiConfig.UiElement hoveredElement;
 
     public UiScreen(UiConfig config) {
@@ -36,6 +44,7 @@ public class UiScreen extends Screen {
         sortElementsByZ();
         this.elementById = indexElements(this.elements);
         this.startTimeMs = System.currentTimeMillis();
+        this.animationById = config.animations;
     }
 
     @Override
@@ -48,11 +57,17 @@ public class UiScreen extends Screen {
 
     public void renderOverlay(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         updateHoverState(mouseX, mouseY);
-        if (config.drawBackground) {
-            renderBackground(guiGraphics, mouseX, mouseY, partialTick);
-        }
-        for (UiConfig.UiElement element : elements) {
-            renderElement(guiGraphics, element, 0, 0, width, height, 0.0f, 0.0f, mouseX, mouseY);
+        long now = System.currentTimeMillis();
+        AnimationState screenState = beginAnimations(guiGraphics, now, AnimationTarget.SCREEN, 0.0f, 0.0f, width, height);
+        try {
+            if (config.drawBackground) {
+                renderBackgroundWithAlpha(guiGraphics, mouseX, mouseY, partialTick, screenState.alpha);
+            }
+            for (UiConfig.UiElement element : elements) {
+                renderElement(guiGraphics, element, 0, 0, width, height, 0.0f, 0.0f, mouseX, mouseY, screenState.alpha, now);
+            }
+        } finally {
+            endAnimations(guiGraphics, screenState);
         }
     }
 
@@ -68,7 +83,9 @@ public class UiScreen extends Screen {
 
     @Override
     public void tick() {
+        tickAnimations();
         if (config.allowMove) {
+            ensureMovementContext();
             updateMovementKeys();
         }
     }
@@ -83,16 +100,24 @@ public class UiScreen extends Screen {
 
     @Override
     public void renderBackground(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+        renderBackgroundWithAlpha(guiGraphics, mouseX, mouseY, partialTick, 1.0f);
+    }
+
+    private void renderBackgroundWithAlpha(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick, float alpha) {
         UiConfig.UiBackground background = config.background;
+        float clampedAlpha = clampAlpha(alpha);
         if (background.gradientTo != null) {
-            guiGraphics.fillGradient(0, 0, width, height, background.color, background.gradientTo);
+            guiGraphics.fillGradient(0, 0, width, height,
+                applyAlpha(background.color, clampedAlpha),
+                applyAlpha(background.gradientTo, clampedAlpha));
         } else {
-            guiGraphics.fill(0, 0, width, height, background.color);
+            guiGraphics.fill(0, 0, width, height, applyAlpha(background.color, clampedAlpha));
         }
         if (background.texture != null && !background.texture.isBlank()) {
             ResourceLocation texture = parseLocation(background.texture);
             if (texture != null) {
-                guiGraphics.blit(texture, 0, 0, 0, 0, width, height, background.textureWidth, background.textureHeight);
+                renderImageWithAlpha(guiGraphics, texture, 0, 0, width, height, 0, 0,
+                    background.textureWidth, background.textureHeight, clampedAlpha);
             }
         }
     }
@@ -128,23 +153,37 @@ public class UiScreen extends Screen {
 
     private void renderElement(GuiGraphics guiGraphics, UiConfig.UiElement element, int originX, int originY,
                                int contextWidth, int contextHeight, float scrollX, float scrollY,
-                               int mouseX, int mouseY) {
+                               int mouseX, int mouseY, float parentAlpha, long now) {
         if (!isVisible(element)) {
             return;
         }
+        ElementBox box = getElementBox(element, contextWidth, contextHeight, scrollX, scrollY);
+        float elementAlpha = parentAlpha;
+        AnimationState elementState = null;
+        if (box != null) {
+            elementState = beginAnimations(guiGraphics, now, AnimationTarget.ELEMENT, originX + box.x, originY + box.y,
+                box.width, box.height, element);
+            elementAlpha = elementState.alpha * parentAlpha;
+        }
         int baseX = originX + Math.round(element.x.resolve(contextWidth, contextHeight, contextWidth) - scrollX);
         int baseY = originY + Math.round(element.y.resolve(contextWidth, contextHeight, contextHeight) - scrollY);
-        switch (element.type) {
-            case TEXT -> renderText(guiGraphics, element, baseX, baseY);
-            case IMAGE -> renderImage(guiGraphics, element, baseX, baseY);
-            case RECT -> renderRect(guiGraphics, element, baseX, baseY);
-            case PROGRESS -> renderProgress(guiGraphics, element, baseX, baseY);
-            case SCROLL -> renderScroll(guiGraphics, element, baseX, baseY, mouseX, mouseY);
-            case SLOT -> renderSlot(guiGraphics, element, baseX, baseY, mouseX, mouseY);
+        try {
+            switch (element.type) {
+                case TEXT -> renderText(guiGraphics, element, baseX, baseY, elementAlpha);
+                case IMAGE -> renderImage(guiGraphics, element, baseX, baseY, elementAlpha);
+                case RECT -> renderRect(guiGraphics, element, baseX, baseY, elementAlpha);
+                case PROGRESS -> renderProgress(guiGraphics, element, baseX, baseY, elementAlpha);
+                case SCROLL -> renderScroll(guiGraphics, element, baseX, baseY, mouseX, mouseY, elementAlpha, now);
+                case SLOT -> renderSlot(guiGraphics, element, baseX, baseY, mouseX, mouseY);
+            }
+        } finally {
+            if (elementState != null) {
+                endAnimations(guiGraphics, elementState);
+            }
         }
     }
 
-    private void renderText(GuiGraphics guiGraphics, UiConfig.UiElement element, int x, int y) {
+    private void renderText(GuiGraphics guiGraphics, UiConfig.UiElement element, int x, int y, float alpha) {
         String resolvedText = resolveText(element.text);
         if (resolvedText == null || resolvedText.isBlank()) {
             return;
@@ -160,11 +199,12 @@ public class UiScreen extends Screen {
         guiGraphics.pose().pushMatrix();
         guiGraphics.pose().translate(drawX, drawY);
         guiGraphics.pose().scale(scale, scale);
-        guiGraphics.drawString(font, component, 0, 0, element.color, element.shadow);
+        float effectiveAlpha = clampAlpha(alpha * element.opacity);
+        guiGraphics.drawString(font, component, 0, 0, applyAlpha(element.color, effectiveAlpha), element.shadow);
         guiGraphics.pose().popMatrix();
     }
 
-    private void renderImage(GuiGraphics guiGraphics, UiConfig.UiElement element, int x, int y) {
+    private void renderImage(GuiGraphics guiGraphics, UiConfig.UiElement element, int x, int y, float alpha) {
         if (element.texture == null || element.texture.isBlank()) {
             return;
         }
@@ -177,55 +217,61 @@ public class UiScreen extends Screen {
         }
         int drawX = element.anchor.applyX(x, element.width);
         int drawY = element.anchor.applyY(y, element.height);
+        float effectiveAlpha = clampAlpha(alpha * element.opacity);
 
         if (element.texture.toLowerCase().endsWith(".gif")) {
             GifManager.GifFrame frame = GifManager.getFrame(texture);
             if (frame != null) {
-                guiGraphics.blit(frame.location(), drawX, drawY, element.u, element.v, element.width, element.height,
-                    frame.width(), frame.height());
+                renderImageWithAlpha(guiGraphics, frame.location(), drawX, drawY, element.width, element.height,
+                    element.u, element.v, frame.width(), frame.height(), effectiveAlpha);
                 return;
             }
         }
 
-        guiGraphics.blit(texture, drawX, drawY, element.u, element.v, element.width, element.height,
-            element.textureWidth, element.textureHeight);
+        renderImageWithAlpha(guiGraphics, texture, drawX, drawY, element.width, element.height, element.u, element.v,
+            element.textureWidth, element.textureHeight, effectiveAlpha);
     }
 
-    private void renderRect(GuiGraphics guiGraphics, UiConfig.UiElement element, int x, int y) {
+    private void renderRect(GuiGraphics guiGraphics, UiConfig.UiElement element, int x, int y, float alpha) {
         if (element.width <= 0 || element.height <= 0) {
             return;
         }
         int drawX = element.anchor.applyX(x, element.width);
         int drawY = element.anchor.applyY(y, element.height);
-        guiGraphics.fill(drawX, drawY, drawX + element.width, drawY + element.height, element.color);
+        guiGraphics.fill(drawX, drawY, drawX + element.width, drawY + element.height,
+            applyAlpha(element.color, clampAlpha(alpha)));
     }
 
-    private void renderProgress(GuiGraphics guiGraphics, UiConfig.UiElement element, int x, int y) {
+    private void renderProgress(GuiGraphics guiGraphics, UiConfig.UiElement element, int x, int y, float alpha) {
         if (element.width <= 0 || element.height <= 0) {
             return;
         }
         int drawX = element.anchor.applyX(x, element.width);
         int drawY = element.anchor.applyY(y, element.height);
+        float clampedAlpha = clampAlpha(alpha);
         if (element.backgroundColor != 0) {
-            guiGraphics.fill(drawX, drawY, drawX + element.width, drawY + element.height, element.backgroundColor);
+            guiGraphics.fill(drawX, drawY, drawX + element.width, drawY + element.height,
+                applyAlpha(element.backgroundColor, clampedAlpha));
         }
 
         float progress = resolveProgress(element);
         int fillWidth = Math.round(element.width * progress);
         if (fillWidth > 0) {
-            guiGraphics.fill(drawX, drawY, drawX + fillWidth, drawY + element.height, element.fillColor);
+            guiGraphics.fill(drawX, drawY, drawX + fillWidth, drawY + element.height,
+                applyAlpha(element.fillColor, clampedAlpha));
         }
     }
 
     private void renderScroll(GuiGraphics guiGraphics, UiConfig.UiElement element, int x, int y,
-                              int mouseX, int mouseY) {
+                              int mouseX, int mouseY, float alpha, long now) {
         if (element.width <= 0 || element.height <= 0) {
             return;
         }
         int drawX = element.anchor.applyX(x, element.width);
         int drawY = element.anchor.applyY(y, element.height);
         if (element.color != 0) {
-            guiGraphics.fill(drawX, drawY, drawX + element.width, drawY + element.height, element.color);
+            guiGraphics.fill(drawX, drawY, drawX + element.width, drawY + element.height,
+                applyAlpha(element.color, clampAlpha(alpha)));
         }
 
         ScrollState state = getScrollState(element);
@@ -235,7 +281,7 @@ public class UiScreen extends Screen {
         try {
             for (UiConfig.UiElement child : element.children) {
                 renderElement(guiGraphics, child, drawX, drawY, element.width, element.height, state.x, state.y,
-                    mouseX, mouseY);
+                    mouseX, mouseY, alpha, now);
             }
         } finally {
             guiGraphics.disableScissor();
@@ -673,6 +719,7 @@ public class UiScreen extends Screen {
             case "shadow" -> element.shadow = asBoolean(value, element.shadow);
             case "align" -> element.align = asString(value, element.align);
             case "color" -> element.color = UiConfig.parseColor(value, element.color);
+            case "opacity" -> element.opacity = asFloat(value, element.opacity);
             case "font" -> element.font = asString(value, element.font);
             case "texture" -> element.texture = asString(value, element.texture);
             case "u" -> element.u = asInt(value, element.u);
@@ -726,6 +773,9 @@ public class UiScreen extends Screen {
             return;
         }
         openEventFired = true;
+        if (config.openAnimation != null && !config.openAnimation.isBlank()) {
+            playAnimation(config.openAnimation);
+        }
         runEventScript("open");
     }
 
@@ -817,6 +867,39 @@ public class UiScreen extends Screen {
         setKeyDown(minecraft.options.keySprint, window);
     }
 
+    private void ensureMovementContext() {
+        if (movementContextPatched) {
+            return;
+        }
+        movementContextPatched = true;
+        captureMovementContext(minecraft.options.keyUp);
+        captureMovementContext(minecraft.options.keyDown);
+        captureMovementContext(minecraft.options.keyLeft);
+        captureMovementContext(minecraft.options.keyRight);
+        captureMovementContext(minecraft.options.keyJump);
+        captureMovementContext(minecraft.options.keyShift);
+        captureMovementContext(minecraft.options.keySprint);
+    }
+
+    private void captureMovementContext(KeyMapping mapping) {
+        if (mapping == null || movementConflictContexts.containsKey(mapping)) {
+            return;
+        }
+        movementConflictContexts.put(mapping, mapping.getKeyConflictContext());
+        mapping.setKeyConflictContext(KeyConflictContext.UNIVERSAL);
+    }
+
+    private void restoreMovementContext() {
+        if (movementConflictContexts.isEmpty()) {
+            return;
+        }
+        for (Map.Entry<KeyMapping, IKeyConflictContext> entry : movementConflictContexts.entrySet()) {
+            entry.getKey().setKeyConflictContext(entry.getValue());
+        }
+        movementConflictContexts.clear();
+        movementContextPatched = false;
+    }
+
     private void resetMovementKeys() {
         if (minecraft == null) {
             return;
@@ -828,6 +911,111 @@ public class UiScreen extends Screen {
         setKeyState(minecraft.options.keyJump, false);
         setKeyState(minecraft.options.keyShift, false);
         setKeyState(minecraft.options.keySprint, false);
+    }
+
+    private void tickAnimations() {
+        if (activeAnimations.isEmpty()) {
+            return;
+        }
+        long now = System.currentTimeMillis();
+        activeAnimations.removeIf(animation -> animation.isFinished(now));
+    }
+
+    public boolean playAnimation(String id) {
+        return playAnimation(id, null);
+    }
+
+    public boolean playAnimation(String id, String elementOverride) {
+        if (id == null || id.isBlank()) {
+            return false;
+        }
+        UiConfig.UiAnimation animation = animationById.get(id);
+        if (animation == null) {
+            return false;
+        }
+        boolean overrideTarget = elementOverride != null && !elementOverride.isBlank();
+        UiConfig.UiAnimation.Target target = overrideTarget ? UiConfig.UiAnimation.Target.ELEMENT : animation.target;
+        String targetElement = overrideTarget ? elementOverride : animation.elementId;
+        if (target == UiConfig.UiAnimation.Target.ELEMENT && (targetElement == null || targetElement.isBlank())) {
+            return false;
+        }
+        activeAnimations.removeIf(active -> active.id.equals(id) && active.matchesTarget(targetElement, target));
+        activeAnimations.add(new ActiveAnimation(id, animation, target, targetElement, System.currentTimeMillis()));
+        return true;
+    }
+
+    public void stopAnimation(String id) {
+        if (id == null || id.isBlank()) {
+            return;
+        }
+        activeAnimations.removeIf(animation -> animation.id.equals(id));
+    }
+
+    private AnimationState beginAnimations(GuiGraphics guiGraphics, long now, AnimationTarget target,
+                                           float originX, float originY, float width, float height) {
+        return beginAnimations(guiGraphics, now, target, originX, originY, width, height, null);
+    }
+
+    private AnimationState beginAnimations(GuiGraphics guiGraphics, long now, AnimationTarget target,
+                                           float originX, float originY, float width, float height,
+                                           UiConfig.UiElement element) {
+        float alpha = 1.0f;
+        boolean pushed = false;
+        if (activeAnimations.isEmpty()) {
+            return new AnimationState(alpha, false);
+        }
+        for (ActiveAnimation animation : activeAnimations) {
+            if (!animation.appliesTo(target, element)) {
+                continue;
+            }
+            AnimationFrame frame = animation.sample(now);
+            alpha *= frame.alpha;
+            if (!pushed) {
+                guiGraphics.pose().pushMatrix();
+                pushed = true;
+            }
+            float pivotX = originX + width * frame.pivotX;
+            float pivotY = originY + height * frame.pivotY;
+            guiGraphics.pose().translate(frame.translateX, frame.translateY);
+            guiGraphics.pose().translate(pivotX, pivotY);
+            guiGraphics.pose().rotate((float) Math.toRadians(frame.rotation));
+            guiGraphics.pose().scale(frame.scale, frame.scale);
+            guiGraphics.pose().translate(-pivotX, -pivotY);
+        }
+        return new AnimationState(clampAlpha(alpha), pushed);
+    }
+
+    private void endAnimations(GuiGraphics guiGraphics, AnimationState state) {
+        if (state.pushed) {
+            guiGraphics.pose().popMatrix();
+        }
+    }
+
+    private void renderImageWithAlpha(GuiGraphics guiGraphics, ResourceLocation texture, int x, int y, int width,
+                                      int height, int u, int v, int textureWidth, int textureHeight, float alpha) {
+        float clampedAlpha = clampAlpha(alpha);
+        int color = clampedAlpha >= 0.999f ? -1 : ARGB.colorFromFloat(clampedAlpha, 1.0f, 1.0f, 1.0f);
+        guiGraphics.blit(RenderPipelines.GUI_TEXTURED, texture, x, y, u, v, width, height, textureWidth, textureHeight, color);
+    }
+
+    private float clampAlpha(float alpha) {
+        if (alpha < 0.0f) {
+            return 0.0f;
+        }
+        if (alpha > 1.0f) {
+            return 1.0f;
+        }
+        return alpha;
+    }
+
+    private int applyAlpha(int color, float alpha) {
+        int baseAlpha = (color >>> 24) & 0xFF;
+        int scaledAlpha = Math.round(baseAlpha * clampAlpha(alpha));
+        return (scaledAlpha << 24) | (color & 0x00FFFFFF);
+    }
+
+    private static float lerp(float start, float end, float progress) {
+        return start + (end - start) * progress;
     }
 
     private void setKeyDown(KeyMapping mapping, long window) {
@@ -901,11 +1089,17 @@ public class UiScreen extends Screen {
         fireCloseEvent();
         if (config.allowMove) {
             resetMovementKeys();
+            restoreMovementContext();
         }
     }
 
     public interface SlotProvider {
         ItemStack getStack(int slotIndex);
+    }
+
+    private enum AnimationTarget {
+        SCREEN,
+        ELEMENT
     }
 
     private enum ScrollAxis {
@@ -931,6 +1125,104 @@ public class UiScreen extends Screen {
                 case "both" -> BOTH;
                 default -> VERTICAL;
             };
+        }
+    }
+
+    private static final class AnimationState {
+        private final float alpha;
+        private final boolean pushed;
+
+        private AnimationState(float alpha, boolean pushed) {
+            this.alpha = alpha;
+            this.pushed = pushed;
+        }
+    }
+
+    private static final class AnimationFrame {
+        private final float scale;
+        private final float alpha;
+        private final float translateX;
+        private final float translateY;
+        private final float rotation;
+        private final float pivotX;
+        private final float pivotY;
+
+        private AnimationFrame(float scale, float alpha, float translateX, float translateY, float rotation,
+                               float pivotX, float pivotY) {
+            this.scale = scale;
+            this.alpha = alpha;
+            this.translateX = translateX;
+            this.translateY = translateY;
+            this.rotation = rotation;
+            this.pivotX = pivotX;
+            this.pivotY = pivotY;
+        }
+    }
+
+    private static final class ActiveAnimation {
+        private final String id;
+        private final UiConfig.UiAnimation definition;
+        private final UiConfig.UiAnimation.Target target;
+        private final String targetElement;
+        private final long startTimeMs;
+
+        private ActiveAnimation(String id, UiConfig.UiAnimation definition, UiConfig.UiAnimation.Target target,
+                                String targetElement, long startTimeMs) {
+            this.id = id;
+            this.definition = definition;
+            this.target = target;
+            this.targetElement = targetElement;
+            this.startTimeMs = startTimeMs;
+        }
+
+        private boolean matchesTarget(String elementId, UiConfig.UiAnimation.Target target) {
+            if (target != this.target) {
+                return false;
+            }
+            if (target == UiConfig.UiAnimation.Target.SCREEN) {
+                return true;
+            }
+            if (elementId == null || elementId.isBlank()) {
+                return this.targetElement == null || this.targetElement.isBlank();
+            }
+            return elementId.equals(this.targetElement);
+        }
+
+        private boolean appliesTo(AnimationTarget target, UiConfig.UiElement element) {
+            if (this.target == UiConfig.UiAnimation.Target.SCREEN) {
+                return target == AnimationTarget.SCREEN;
+            }
+            if (target != AnimationTarget.ELEMENT || element == null) {
+                return false;
+            }
+            if (targetElement == null || targetElement.isBlank()) {
+                return false;
+            }
+            return targetElement.equals(element.id);
+        }
+
+        private boolean isFinished(long now) {
+            if (definition.loop) {
+                return false;
+            }
+            long duration = Math.max(1, definition.durationMs);
+            return now - startTimeMs >= duration;
+        }
+
+        private AnimationFrame sample(long now) {
+            long duration = Math.max(1, definition.durationMs);
+            float progress = (now - startTimeMs) / (float) duration;
+            if (definition.loop) {
+                progress = progress - (float) Math.floor(progress);
+            } else {
+                progress = Math.min(1.0f, Math.max(0.0f, progress));
+            }
+            float scale = lerp(definition.scaleFrom, definition.scaleTo, progress);
+            float alpha = lerp(definition.alphaFrom, definition.alphaTo, progress);
+            float translateX = lerp(definition.translateXFrom, definition.translateXTo, progress);
+            float translateY = lerp(definition.translateYFrom, definition.translateYTo, progress);
+            float rotation = lerp(definition.rotateFrom, definition.rotateTo, progress);
+            return new AnimationFrame(scale, alpha, translateX, translateY, rotation, definition.pivotX, definition.pivotY);
         }
     }
 

@@ -25,3 +25,5 @@
 - Added hover actions (`enter`/`leave`), `allow_move`/`override_esc` support, and JS setters for element properties.
 - Added `esc.yml` to replace the pause menu when in-world.
 - Added HUD replacement support (`hud.yml`), HUD stat tokens, and JS helpers for player/target data.
+- Fixed `allow_move` to keep movement keybindings active while a UI is open.
+- Added element opacity for `text` and `image` plus UI animation definitions (`animations`, `open_animation`) and JS playback helpers.
