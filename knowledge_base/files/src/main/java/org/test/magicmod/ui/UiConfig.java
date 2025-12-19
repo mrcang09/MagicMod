@@ -10,19 +10,25 @@ public final class UiConfig {
     public final String title;
     public final boolean allowMove;
     public final boolean overrideEsc;
+    public final boolean hud;
+    public final boolean replaceHud;
+    public final boolean drawBackground;
     public final boolean replaceVanilla;
     public final List<String> matchTitles;
     public final Map<String, String> events;
     public final UiBackground background;
     public final List<UiElement> elements;
 
-    private UiConfig(String id, String title, boolean allowMove, boolean overrideEsc, boolean replaceVanilla,
-                     List<String> matchTitles, Map<String, String> events, UiBackground background,
-                     List<UiElement> elements) {
+    private UiConfig(String id, String title, boolean allowMove, boolean overrideEsc, boolean hud, boolean replaceHud,
+                     boolean drawBackground, boolean replaceVanilla, List<String> matchTitles,
+                     Map<String, String> events, UiBackground background, List<UiElement> elements) {
         this.id = id;
         this.title = title;
         this.allowMove = allowMove;
         this.overrideEsc = overrideEsc;
+        this.hud = hud;
+        this.replaceHud = replaceHud;
+        this.drawBackground = drawBackground;
         this.replaceVanilla = replaceVanilla;
         this.matchTitles = matchTitles;
         this.events = events;
@@ -35,19 +41,23 @@ public final class UiConfig {
         String title = getString(root, "title", id);
         boolean allowMove = getBoolean(root, "allow_move", false);
         boolean overrideEsc = getBoolean(root, "override_esc", false);
+        boolean hud = getBoolean(root, "hud", false);
+        boolean drawBackground = getBoolean(root, "draw_background", !hud);
+        boolean replaceHud = getBoolean(root, "replace_hud", hud);
         boolean replaceVanilla = getBoolean(root, "replace_vanilla", false);
         List<String> matchTitles = getStringList(root, "match_titles");
         Map<String, String> events = parseActions(getMap(root, "events"));
         UiBackground background = UiBackground.fromMap(getMap(root, "background"));
         List<UiElement> elements = parseElements(getList(root, "elements"));
-        return new UiConfig(id, title, allowMove, overrideEsc, replaceVanilla, matchTitles, events, background, elements);
+        return new UiConfig(id, title, allowMove, overrideEsc, hud, replaceHud, drawBackground, replaceVanilla,
+            matchTitles, events, background, elements);
     }
 
     private static List<UiElement> parseElements(List<Object> rawElements) {
-        if (rawElements.isEmpty()) {
-            return List.of();
-        }
         List<UiElement> elements = new ArrayList<>();
+        if (rawElements.isEmpty()) {
+            return elements;
+        }
         for (Object rawElement : rawElements) {
             if (rawElement instanceof Map<?, ?> map) {
                 @SuppressWarnings("unchecked")
@@ -56,7 +66,7 @@ public final class UiConfig {
             }
         }
         elements.sort((left, right) -> Integer.compare(left.z, right.z));
-        return Collections.unmodifiableList(elements);
+        return elements;
     }
 
     static final class UiBackground {

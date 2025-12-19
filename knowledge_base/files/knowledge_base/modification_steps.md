@@ -19,3 +19,4 @@
 17. Moved audio playback to a standalone audio module and switched to direct `assets/magicmod/music/*.ogg` paths.
 18. Added hover actions, ESC override/movement options, and a JS setter for element properties.
 19. Added `esc.yml` and a pause-screen hook that only replaces ESC when the player is in-world.
+20. Added HUD overlay support, JS stat helpers, and a sample `hud.yml`.

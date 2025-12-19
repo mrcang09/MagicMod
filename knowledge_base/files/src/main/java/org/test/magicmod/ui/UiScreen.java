@@ -48,7 +48,9 @@ public class UiScreen extends Screen {
 
     public void renderOverlay(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         updateHoverState(mouseX, mouseY);
-        renderBackground(guiGraphics, mouseX, mouseY, partialTick);
+        if (config.drawBackground) {
+            renderBackground(guiGraphics, mouseX, mouseY, partialTick);
+        }
         for (UiConfig.UiElement element : elements) {
             renderElement(guiGraphics, element, 0, 0, width, height, 0.0f, 0.0f, mouseX, mouseY);
         }
@@ -143,11 +145,12 @@ public class UiScreen extends Screen {
     }
 
     private void renderText(GuiGraphics guiGraphics, UiConfig.UiElement element, int x, int y) {
-        if (element.text == null || element.text.isBlank()) {
+        String resolvedText = resolveText(element.text);
+        if (resolvedText == null || resolvedText.isBlank()) {
             return;
         }
         float scale = Math.max(0.1f, element.scale);
-        Component component = buildTextComponent(element);
+        Component component = buildTextComponent(element, resolvedText);
         int textWidth = Math.round(font.width(component) * scale);
         int textHeight = Math.round(font.lineHeight * scale);
         int alignedX = applyTextAlign(element.align, x, textWidth);
@@ -399,7 +402,11 @@ public class UiScreen extends Screen {
                     return null;
                 }
                 float scale = Math.max(0.1f, element.scale);
-                Component component = buildTextComponent(element);
+                String resolvedText = resolveText(element.text);
+                if (resolvedText == null || resolvedText.isBlank()) {
+                    return null;
+                }
+                Component component = buildTextComponent(element, resolvedText);
                 int textWidth = Math.round(font.width(component) * scale);
                 int textHeight = Math.round(font.lineHeight * scale);
                 int alignedX = applyTextAlign(element.align, x, textWidth);
@@ -489,8 +496,8 @@ public class UiScreen extends Screen {
         };
     }
 
-    private Component buildTextComponent(UiConfig.UiElement element) {
-        net.minecraft.network.chat.MutableComponent component = Component.literal(element.text);
+    private Component buildTextComponent(UiConfig.UiElement element, String text) {
+        net.minecraft.network.chat.MutableComponent component = Component.literal(text);
         String fontName = element.font;
         if (fontName == null || fontName.isBlank()) {
             return component;
@@ -503,6 +510,58 @@ public class UiScreen extends Screen {
             return component;
         }
         return component.withStyle(style -> style.withFont(fontId));
+    }
+
+    private String resolveText(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return raw;
+        }
+        if (!raw.contains("{")) {
+            return raw;
+        }
+        Minecraft minecraft = Minecraft.getInstance();
+        var player = minecraft.player;
+        float health = player != null ? player.getHealth() : 0.0f;
+        float maxHealth = player != null ? player.getMaxHealth() : 0.0f;
+        int food = player != null ? player.getFoodData().getFoodLevel() : 0;
+        float saturation = player != null ? player.getFoodData().getSaturationLevel() : 0.0f;
+        int level = player != null ? player.experienceLevel : 0;
+        float expProgress = player != null ? player.experienceProgress : 0.0f;
+        int expTotal = player != null ? player.totalExperience : 0;
+        var target = minecraft.crosshairPickEntity;
+        String targetType = "";
+        String targetName = "";
+        float targetHealth = 0.0f;
+        if (target != null) {
+            targetType = net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.getKey(target.getType()).toString();
+            targetName = target.getName().getString();
+            if (target instanceof net.minecraft.world.entity.LivingEntity living) {
+                targetHealth = living.getHealth();
+            }
+        }
+        String result = raw;
+        result = result.replace("{health}", formatNumber(health));
+        result = result.replace("{max_health}", formatNumber(maxHealth));
+        result = result.replace("{food}", Integer.toString(food));
+        result = result.replace("{saturation}", formatNumber(saturation));
+        result = result.replace("{exp_level}", Integer.toString(level));
+        result = result.replace("{exp}", formatPercent(expProgress));
+        result = result.replace("{exp_total}", Integer.toString(expTotal));
+        result = result.replace("{target_type}", targetType);
+        result = result.replace("{target_name}", targetName);
+        result = result.replace("{target_health}", formatNumber(targetHealth));
+        return result;
+    }
+
+    private String formatPercent(float value) {
+        return formatNumber(value * 100.0f);
+    }
+
+    private String formatNumber(float value) {
+        if (Math.abs(value - Math.round(value)) < 0.01f) {
+            return Integer.toString(Math.round(value));
+        }
+        return String.format(java.util.Locale.ROOT, "%.1f", value);
     }
 
     private ResourceLocation parseFontLocation(String raw) {
@@ -559,6 +618,35 @@ public class UiScreen extends Screen {
 
     public boolean isReplaceVanilla() {
         return config.replaceVanilla;
+    }
+
+    public boolean addElement(Map<String, Object> elementData) {
+        return addElement(null, elementData);
+    }
+
+    public boolean addElement(String parentId, Map<String, Object> elementData) {
+        if (elementData == null || elementData.isEmpty()) {
+            return false;
+        }
+        UiConfig.UiElement element = UiConfig.UiElement.fromMap(elementData);
+        if (element.id != null && !element.id.isBlank() && elementById.containsKey(element.id)) {
+            return false;
+        }
+        if (parentId == null || parentId.isBlank() || "root".equalsIgnoreCase(parentId)) {
+            elements.add(element);
+            sortElementsByZ();
+            registerElement(element);
+            return true;
+        }
+        UiConfig.UiElement parent = elementById.get(parentId);
+        if (parent == null) {
+            return false;
+        }
+        ensureMutableChildren(parent);
+        parent.children.add(element);
+        parent.children.sort(Comparator.comparingInt(child -> child.z));
+        registerElement(element);
+        return true;
     }
 
     public void setElementProperty(String id, String property, Object value) {
@@ -667,6 +755,23 @@ public class UiScreen extends Screen {
             if (!element.children.isEmpty()) {
                 indexElementsInto(map, element.children);
             }
+        }
+    }
+
+    private void registerElement(UiConfig.UiElement element) {
+        if (element.id != null && !element.id.isBlank()) {
+            elementById.put(element.id, element);
+        }
+        if (!element.children.isEmpty()) {
+            indexElementsInto(elementById, element.children);
+        }
+    }
+
+    private void ensureMutableChildren(UiConfig.UiElement element) {
+        if (element.children == null) {
+            element.children = new ArrayList<>();
+        } else if (!(element.children instanceof ArrayList<?>)) {
+            element.children = new ArrayList<>(element.children);
         }
     }
 

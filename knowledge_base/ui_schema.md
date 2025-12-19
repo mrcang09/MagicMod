@@ -30,6 +30,9 @@ Top level:
 - `title`: string, optional, used for the screen title.
 - `allow_move`: boolean, optional; when true the player can keep moving while the UI is open.
 - `override_esc`: boolean, optional; when true ESC won't close the UI (use `events.esc` to handle it).
+- `hud`: boolean, optional; when true this UI is treated as a HUD overlay.
+- `replace_hud`: boolean, optional; when true the HUD replaces the vanilla HUD layers.
+- `draw_background`: boolean, optional; when false skips drawing the UI background (useful for HUD).
 - `replace_vanilla`: boolean, optional; when true the UI replaces the vanilla container render.
 - `match_titles`: list of strings, optional; when set, the overlay only applies if the screen title matches.
 - `events`: map of event keys to JS scripts (`open`, `close`, `esc`).
@@ -60,6 +63,7 @@ Text:
 - `shadow`: boolean.
 - `align`: `left`, `center`, `right` (optional).
 - `font`: `original` or a font id (e.g. `magicmod:arcana`).
+- Text supports tokens like `{health}`, `{max_health}`, `{food}`, `{exp_level}`, `{exp}`, `{exp_total}`, `{target_type}`, `{target_name}`, `{target_health}`.
 
 Image:
 - `texture`: resource location string.
@@ -89,6 +93,7 @@ Slot:
 - `slot`: int slot index from the current container menu.
 - `width`, `height`: optional; defaults to 16 if not set.
 - `hover_mask`: boolean, draw a translucent hover overlay when the mouse is over the slot.
+- HUD slot indices: `0-8` hotbar, `40` offhand, `41` main hand.
 
 Actions:
 - `left_click`, `right_click`, `middle_click`
@@ -99,3 +104,4 @@ Notes:
 - `match_titles` ignores color codes. Both `&` and `§` are accepted in the config.
 - `events.open` fires when the UI is initialized; `events.close` fires when it is closed.
 - Use `ui.set(id, property, value)` in scripts to change element properties at runtime.
+- Use `ui.create(parentId, element)` to dynamically create elements in JS (`parentId` optional).

@@ -28,6 +28,7 @@ import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
 import org.test.magicmod.audio.AudioController;
 import org.test.magicmod.client.ClientUiCommands;
+import org.test.magicmod.client.UiHudManager;
 import org.test.magicmod.client.UiOverlayManager;
 import org.slf4j.Logger;
 
@@ -85,6 +86,7 @@ public class Magicmod {
             ClientUiCommands.register();
             UiOverlayManager.register();
             AudioController.register();
+            UiHudManager.register(modBusGroup);
         }
     }
 

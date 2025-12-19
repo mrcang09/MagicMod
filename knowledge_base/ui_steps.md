@@ -37,6 +37,7 @@ actions:
   - `inventory.yml` for the player inventory screen.
   - `chest.yml` for chest screens.
   - `esc.yml` for the in-world pause menu (only when the player is in a world).
+  - `hud.yml` for the in-world HUD (only when the player is in a world).
 - Use `replace_vanilla: true` if you want to hide the vanilla container rendering.
 - For chest overlays, set `match_titles` to the container title(s) you want to target.
   - Color codes are ignored when matching; `&` and `§` are accepted in config strings.
@@ -52,6 +53,14 @@ events:
 
 - `allow_move: true` lets the player continue moving while the UI is open.
 - `override_esc: true` stops ESC from closing the screen (use `events.esc` for custom behavior).
+- `hud: true` marks a UI as a HUD overlay; `replace_hud: true` hides vanilla HUD layers.
+- `draw_background: false` is recommended for HUD overlays.
+
+JS helpers:
+- `ui.getHealth()`, `ui.getMaxHealth()`, `ui.getFood()`, `ui.getFoodSaturation()`
+- `ui.getExperienceLevel()`, `ui.getExperienceProgress()`, `ui.getExperienceTotal()`
+- `ui.getTargetEntityType()`, `ui.getTargetEntityName()`, `ui.getTargetEntityHealth()`
+- `ui.getAttribute('minecraft:generic.max_health')`
 - Audio loads OGG files directly from `assets/<namespace>/music/`.
   - Example file `assets/magicmod/music/ui_test.ogg` can be played with `ui.playMusic('ui_test.ogg', 0.6, true)` or `ui.playMusic('magicmod:music/ui_test.ogg', 0.6, true)`.
   - `ui.playMusic(path, volume, loop, stopAtMs)` uses `stopAtMs` only when `loop` is `false`.

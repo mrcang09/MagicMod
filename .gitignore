@@ -2,6 +2,7 @@
 build/
 run/
 net/
+tmp_sources/
 out/
 logs/
 *.log
