@@ -15,6 +15,8 @@ public final class UiConfig {
     public final boolean drawBackground;
     public final boolean replaceVanilla;
     public final boolean shaderRender;
+    public final boolean useAtlas;
+    public final int atlasSize;
     public final List<String> matchTitles;
     public final Map<String, String> events;
     public final String openAnimation;
@@ -23,8 +25,8 @@ public final class UiConfig {
     public final List<UiElement> elements;
 
     private UiConfig(String id, String title, boolean allowMove, boolean overrideEsc, boolean hud, boolean replaceHud,
-                     boolean drawBackground, boolean replaceVanilla, boolean shaderRender, List<String> matchTitles,
-                     Map<String, String> events, String openAnimation, Map<String, UiAnimation> animations,
+                     boolean drawBackground, boolean replaceVanilla, boolean shaderRender, boolean useAtlas, int atlasSize,
+                     List<String> matchTitles, Map<String, String> events, String openAnimation, Map<String, UiAnimation> animations,
                      UiBackground background, List<UiElement> elements) {
         this.id = id;
         this.title = title;
@@ -35,6 +37,8 @@ public final class UiConfig {
         this.drawBackground = drawBackground;
         this.replaceVanilla = replaceVanilla;
         this.shaderRender = shaderRender;
+        this.useAtlas = useAtlas;
+        this.atlasSize = atlasSize;
         this.matchTitles = matchTitles;
         this.events = events;
         this.openAnimation = openAnimation;
@@ -53,6 +57,8 @@ public final class UiConfig {
         boolean replaceHud = getBoolean(root, "replace_hud", hud);
         boolean replaceVanilla = getBoolean(root, "replace_vanilla", false);
         boolean shaderRender = getBoolean(root, "shader_render", false);
+        boolean useAtlas = getBoolean(root, "use_atlas", false);
+        int atlasSize = getInt(root, "atlas_size", 128);
         List<String> matchTitles = getStringList(root, "match_titles");
         Map<String, String> events = parseActions(getMap(root, "events"));
         String openAnimation = getString(root, "open_animation", null);
@@ -60,7 +66,7 @@ public final class UiConfig {
         UiBackground background = UiBackground.fromMap(getMap(root, "background"));
         List<UiElement> elements = parseElements(getList(root, "elements"));
         return new UiConfig(id, title, allowMove, overrideEsc, hud, replaceHud, drawBackground, replaceVanilla,
-            shaderRender, matchTitles, events, openAnimation, animations, background, elements);
+            shaderRender, useAtlas, atlasSize, matchTitles, events, openAnimation, animations, background, elements);
     }
 
     private static List<UiElement> parseElements(List<Object> rawElements) {
