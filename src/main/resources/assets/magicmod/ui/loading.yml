@@ -1,0 +1,117 @@
+id: "magic_loading"
+title: "Magic Loading"
+background:
+  color: "#0b0f14"
+  gradient_to: "#162433"
+elements:
+  - id: "title"
+    type: "text"
+    text: "MAGIC MOD"
+    font: "original"
+    x: "50%"
+    y: "18%"
+    anchor: "center"
+    z: 10
+    color: "#f2c94c"
+    scale: 2.4
+    shadow: true
+  - id: "subtitle"
+    type: "text"
+    text: "Loading Arcana..."
+    font: "original"
+    x: "50%"
+    y: "28%"
+    anchor: "center"
+    z: 11
+    color: "#9fb3c8"
+    scale: 1.0
+    shadow: false
+  - id: "glyph"
+    type: "image"
+    texture: "minecraft:textures/item/ender_eye.png"
+    x: "50%"
+    y: "50%"
+    width: 96
+    height: 96
+    texture_width: 16
+    texture_height: 16
+    anchor: "center"
+    z: 5
+    actions:
+      left_click: "ui.toggle('log_list')"
+      right_click: "ui.open('loading.yml')"
+  - id: "progress_bg"
+    type: "rect"
+    x: "50%"
+    y: "72%"
+    width: 260
+    height: 12
+    anchor: "center"
+    z: 1
+    color: "#1c2633"
+  - id: "progress"
+    type: "progress"
+    x: "50%"
+    y: "72%"
+    width: 260
+    height: 12
+    anchor: "center"
+    z: 2
+    fill_color: "#5bd6ff"
+    bg_color: "#00000000"
+    mode: "time"
+    duration_ms: 2200
+  - id: "log_list"
+    type: "scroll"
+    x: "50%"
+    y: "86%"
+    width: 260
+    height: 60
+    anchor: "center"
+    z: 3
+    color: "#111821"
+    scroll_direction: "vertical"
+    scroll_step: 12
+    children:
+      - id: "log_1"
+        type: "text"
+        text: "Arcana core online"
+        font: "original"
+        x: 8
+        y: 4
+        color: "#8fb3c8"
+      - id: "log_2"
+        type: "text"
+        text: "Binding rune glyphs"
+        font: "original"
+        x: 8
+        y: 18
+        color: "#8fb3c8"
+      - id: "log_3"
+        type: "text"
+        text: "Linking mana streams"
+        font: "original"
+        x: 8
+        y: 32
+        color: "#8fb3c8"
+      - id: "log_4"
+        type: "text"
+        text: "Crystallizing focus"
+        font: "original"
+        x: 8
+        y: 46
+        color: "#8fb3c8"
+      - id: "log_5"
+        type: "text"
+        text: "Calibrating conduits"
+        font: "original"
+        x: 8
+        y: 60
+        color: "#8fb3c8"
+      - id: "log_6"
+        type: "text"
+        text: "Stabilizing sigils"
+        font: "original"
+        x: 8
+        y: 74
+        color: "#8fb3c8"
