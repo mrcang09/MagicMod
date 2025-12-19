@@ -137,7 +137,8 @@ public final class UiConfig {
             RECT,
             PROGRESS,
             SCROLL,
-            SLOT
+            SLOT,
+            ENTITY
         }
 
         String id;
@@ -180,6 +181,11 @@ public final class UiConfig {
         float scrollY;
         int slotIndex;
         boolean hoverMask;
+        String targetType;
+        String playerName;
+        String entityUuid;
+        boolean lookAtMouse;
+        float entityScale;
 
         private UiElement(String id, Type type, UiValue x, UiValue y, int width, int height, UiAnchor anchor,
                           UiAnchorAxis anchorAxis, int z, boolean visible, Map<String, String> actions,
@@ -187,7 +193,8 @@ public final class UiConfig {
                           int u, int v, int textureWidth, int textureHeight, int fillColor, int backgroundColor,
                           String mode, float value, float max, int durationMs, List<UiElement> children,
                           String scrollDirection, float scrollStep, float scrollX, float scrollY, int slotIndex,
-                          boolean hoverMask) {
+                          boolean hoverMask, String targetType, String playerName, String entityUuid,
+                          boolean lookAtMouse, float entityScale) {
             this.id = id;
             this.type = type;
             this.x = x;
@@ -224,6 +231,11 @@ public final class UiConfig {
             this.scrollY = scrollY;
             this.slotIndex = slotIndex;
             this.hoverMask = hoverMask;
+            this.targetType = targetType;
+            this.playerName = playerName;
+            this.entityUuid = entityUuid;
+            this.lookAtMouse = lookAtMouse;
+            this.entityScale = entityScale;
         }
 
         static UiElement fromMap(Map<String, Object> map) {
@@ -274,10 +286,17 @@ public final class UiConfig {
             float scrollY = getFloat(map, "scroll_y", 0.0f);
             int slotIndex = getInt(map, "slot", -1);
             boolean hoverMask = getBoolean(map, "hover_mask", getBoolean(map, "slot_hover", false));
+            String targetType = getString(map, "target_type", getString(map, "targetType", getString(map, "target", "player")));
+            String playerName = getString(map, "player_name", getString(map, "playerName", ""));
+            String entityUuid = getString(map, "entity_uuid", getString(map, "target_uuid", getString(map, "uuid", "")));
+            boolean lookAtMouse = getBoolean(map, "look_at_mouse", getBoolean(map, "lookAtMouse", true));
+            boolean scaleProvided = map.containsKey("scale");
+            float entityScale = getFloat(map, "entity_scale", scaleProvided ? scale : 0.0f);
 
             return new UiElement(id, type, x, y, width, height, anchor, anchorAxis, z, visible, actions, text, scale, shadow, align,
                 color, opacity, font, texture, u, v, textureWidth, textureHeight, fillColor, backgroundColor, mode,
-                value, max, durationMs, children, scrollDirection, scrollStep, scrollX, scrollY, slotIndex, hoverMask);
+                value, max, durationMs, children, scrollDirection, scrollStep, scrollX, scrollY, slotIndex, hoverMask,
+                targetType, playerName, entityUuid, lookAtMouse, entityScale);
         }
 
         private static Type parseType(Object raw) {

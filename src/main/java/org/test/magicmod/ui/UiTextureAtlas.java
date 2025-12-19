@@ -108,8 +108,9 @@ public class UiTextureAtlas {
 
             // Upload to GPU
             Minecraft minecraft = Minecraft.getInstance();
-            dynamicTexture = new DynamicTexture(atlasImage);
-            atlasLocation = minecraft.getTextureManager().register("ui_atlas_" + System.currentTimeMillis(), dynamicTexture);
+            dynamicTexture = new DynamicTexture(() -> "ui_atlas_" + System.currentTimeMillis(), atlasImage);
+            atlasLocation = ResourceLocation.fromNamespaceAndPath(Magicmod.MODID, "ui_atlas_" + System.currentTimeMillis());
+            minecraft.getTextureManager().register(atlasLocation, dynamicTexture);
 
             built = true;
             return true;

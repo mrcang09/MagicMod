@@ -33,3 +33,7 @@
 - Enhanced anchor system with separate `anchor_x` and `anchor_y` for independent horizontal/vertical positioning.
 - Added UiAnchorAxis class supporting fine-grained anchor control (left/center/right, top/center/bottom).
 - Created shader_demo.yml showcasing GPU rendering and flexible anchor positioning.
+- Added `entity` UI element to render LivingEntity targets (self, player by name, or UUID) with optional mouse-facing.
+- Added entity fields to UI schema/runtime setters and render path integration (works in shader/atlas mode by using non-instanced fallback).
+- Added local player entity to `hud.yml`.
+- Added `run_client_java.bat` to set JAVA_HOME and launch the client.

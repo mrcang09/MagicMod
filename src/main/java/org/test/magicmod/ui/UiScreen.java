@@ -5,11 +5,15 @@ import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.ARGB;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.client.settings.IKeyConflictContext;
 import net.minecraftforge.client.settings.KeyConflictContext;
 
@@ -19,6 +23,7 @@ import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 public class UiScreen extends Screen {
     private final UiConfig config;
@@ -217,6 +222,7 @@ public class UiScreen extends Screen {
                 case PROGRESS -> renderProgress(guiGraphics, element, baseX, baseY, elementAlpha);
                 case SCROLL -> renderScroll(guiGraphics, element, baseX, baseY, mouseX, mouseY, elementAlpha, now);
                 case SLOT -> renderSlot(guiGraphics, element, baseX, baseY, mouseX, mouseY);
+                case ENTITY -> renderEntity(guiGraphics, element, baseX, baseY, mouseX, mouseY, elementAlpha);
             }
         } finally {
             if (elementState != null) {
@@ -361,6 +367,120 @@ public class UiScreen extends Screen {
         }
     }
 
+    private void renderEntity(GuiGraphics guiGraphics, UiConfig.UiElement element, int x, int y,
+                              int mouseX, int mouseY, float alpha) {
+        if (element.width <= 0 || element.height <= 0) {
+            return;
+        }
+        float effectiveAlpha = clampAlpha(alpha * element.opacity);
+        if (effectiveAlpha <= 0.0f) {
+            return;
+        }
+        LivingEntity entity = resolveEntityTarget(element);
+        if (entity == null) {
+            return;
+        }
+        int drawX = element.anchorAxis.applyX(x, element.width);
+        int drawY = element.anchorAxis.applyY(y, element.height);
+        int left = drawX;
+        int top = drawY;
+        int right = drawX + element.width;
+        int bottom = drawY + element.height;
+        int scale = Math.max(1, Math.round(resolveEntityScale(element)));
+        float lookX = element.lookAtMouse ? mouseX : (left + right) * 0.5f;
+        float lookY = element.lookAtMouse ? mouseY : (top + bottom) * 0.5f;
+
+        InventoryScreen.renderEntityInInventoryFollowsMouse(
+            guiGraphics, left, top, right, bottom, scale, 0.0625F, lookX, lookY, entity
+        );
+    }
+
+    private LivingEntity resolveEntityTarget(UiConfig.UiElement element) {
+        Minecraft minecraft = Minecraft.getInstance();
+        if (minecraft == null || minecraft.level == null) {
+            return null;
+        }
+        String targetType = normalizeTargetType(element.targetType);
+        String uuidRaw = element.entityUuid;
+        if (uuidRaw != null && !uuidRaw.isBlank()) {
+            try {
+                UUID uuid = UUID.fromString(uuidRaw.trim());
+                Entity entity = minecraft.level.getEntity(uuid);
+                if (entity instanceof LivingEntity living) {
+                    return living;
+                }
+                return null;
+            } catch (IllegalArgumentException ignored) {
+                return null;
+            }
+        }
+        boolean playerTarget = isPlayerTarget(targetType);
+        if (playerTarget) {
+            String playerName = element.playerName;
+            if (playerName != null && !playerName.isBlank()) {
+                LivingEntity byName = findPlayerByName(minecraft, playerName.trim());
+                if (byName != null) {
+                    return byName;
+                }
+            }
+            return minecraft.player;
+        }
+        return null;
+    }
+
+    private LivingEntity findPlayerByName(Minecraft minecraft, String playerName) {
+        if (minecraft == null || minecraft.level == null || playerName == null || playerName.isBlank()) {
+            return null;
+        }
+        for (Player player : minecraft.level.players()) {
+            if (matchesPlayerName(player, playerName)) {
+                return player;
+            }
+        }
+        return null;
+    }
+
+    private boolean matchesPlayerName(Player player, String playerName) {
+        if (player == null || playerName == null) {
+            return false;
+        }
+        String profileName = player.getGameProfile().getName();
+        if (profileName != null && profileName.equalsIgnoreCase(playerName)) {
+            return true;
+        }
+        return player.getName().getString().equalsIgnoreCase(playerName);
+    }
+
+    private float resolveEntityScale(UiConfig.UiElement element) {
+        if (element.entityScale > 0.0f) {
+            return element.entityScale;
+        }
+        int width = element.width;
+        int height = element.height;
+        int min = Math.min(width, height);
+        if (min <= 0) {
+            return 30.0f;
+        }
+        return Math.max(1.0f, min * 0.6f);
+    }
+
+    private boolean isPlayerTarget(String targetType) {
+        if (targetType == null || targetType.isBlank()) {
+            return true;
+        }
+        return switch (targetType) {
+            case "player", "self", "local", "player_name", "playername" -> true;
+            default -> false;
+        };
+    }
+
+    private String normalizeTargetType(String raw) {
+        if (raw == null) {
+            return "";
+        }
+        return raw.trim().toLowerCase();
+    }
+
     private void updateHoverState(int mouseX, int mouseY) {
         UiConfig.UiElement current = findHitElement(elements, 0, 0, width, height, 0.0f, 0.0f, mouseX, mouseY);
         if (current == hoveredElement) {
@@ -502,7 +622,7 @@ public class UiScreen extends Screen {
                 int drawY = element.anchorAxis.applyY(y, textHeight);
                 return new ElementBox(drawX, drawY, textWidth, textHeight);
             }
-            case IMAGE, RECT, PROGRESS, SCROLL, SLOT -> {
+            case IMAGE, RECT, PROGRESS, SCROLL, SLOT, ENTITY -> {
                 int width = element.width > 0 ? element.width : (element.type == UiConfig.UiElement.Type.SLOT ? 16 : 0);
                 int height = element.height > 0 ? element.height : (element.type == UiConfig.UiElement.Type.SLOT ? 16 : 0);
                 if (width <= 0 || height <= 0) {
@@ -792,6 +912,11 @@ public class UiScreen extends Screen {
             }
             case "slot" -> element.slotIndex = asInt(value, element.slotIndex);
             case "hover_mask", "slot_hover" -> element.hoverMask = asBoolean(value, element.hoverMask);
+            case "target_type", "targettype", "target" -> element.targetType = asString(value, element.targetType);
+            case "player_name", "playername", "target_name", "targetname" -> element.playerName = asString(value, element.playerName);
+            case "entity_uuid", "entityuuid", "target_uuid", "targetuuid", "uuid" -> element.entityUuid = asString(value, element.entityUuid);
+            case "look_at_mouse", "lookatmouse" -> element.lookAtMouse = asBoolean(value, element.lookAtMouse);
+            case "entity_scale" -> element.entityScale = asFloat(value, element.entityScale);
             default -> {
             }
         }

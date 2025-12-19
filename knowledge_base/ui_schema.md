@@ -53,7 +53,7 @@ Background:
 
 Element common fields:
 - `id`: string.
-- `type`: `text`, `image`, `rect`, `progress`, `scroll` (alias `scroll_list`).
+- `type`: `text`, `image`, `rect`, `progress`, `scroll` (alias `scroll_list`), `slot`, `entity`.
 - `x`, `y`: number or percent string (e.g. `120`, `"50%"`).
 - `width`, `height`: int (used by `image`, `rect`, `progress`).
 - `anchor`: `top_left`, `top_center`, `top_right`, `center_left`, `center`, `center_right`, `bottom_left`, `bottom_center`, `bottom_right` (legacy, combined anchor).
@@ -104,6 +104,14 @@ Slot:
 - `width`, `height`: optional; defaults to 16 if not set.
 - `hover_mask`: boolean, draw a translucent hover overlay when the mouse is over the slot.
 - HUD slot indices: `0-8` hotbar, `40` offhand, `41` main hand.
+
+Entity:
+- `target_type`: `player` (default), `self`, or `player_name`.
+- `player_name`: string; if set, finds a matching player in the current level.
+- `entity_uuid`: UUID string; highest priority, must refer to a loaded LivingEntity.
+- `look_at_mouse`: boolean, default `true`.
+- `entity_scale`: float; if omitted uses a size derived from the element bounds.
+- Requires `width`/`height`. Non-living entities are ignored.
 
 Actions:
 - `left_click`, `right_click`, `middle_click`

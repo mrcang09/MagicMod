@@ -34,6 +34,16 @@ elements:
     color: "#ffffff"
     scale: 1.0
     shadow: true
+  - id: "hud_player"
+    type: "entity"
+    target_type: "player"
+    look_at_mouse: false
+    x: 8
+    y: "h - 150"
+    width: 60
+    height: 60
+    entity_scale: 30
+    z: 3
   - id: "hotbar_slot_0"
     type: "slot"
     slot: 0

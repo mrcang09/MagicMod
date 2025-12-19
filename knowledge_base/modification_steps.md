@@ -32,3 +32,7 @@
 30. Created UiAnchorAxis class supporting independent horizontal (left/center/right) and vertical (top/center/bottom) anchors.
 31. Updated UiScreen to use anchorAxis for all element positioning.
 32. Created shader_demo.yml demonstrating shader rendering and enhanced anchor capabilities.
+33. Added `entity` element type for rendering LivingEntity targets, with mouse-facing support.
+34. Added entity target fields (`target_type`, `player_name`, `entity_uuid`, `look_at_mouse`, `entity_scale`) and runtime setters.
+35. Added player entity rendering to `hud.yml`.
+36. Added `run_client_java.bat` to set `JAVA_HOME` and launch the client.

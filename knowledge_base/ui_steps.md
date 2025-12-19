@@ -15,7 +15,7 @@
 ```
 
    - Use `font: magicmod:arcana` in the YAML text element.
-4. Launch the client with `gradlew runClient`.
+4. Launch the client with `gradlew runClient` or `run_client_java.bat`.
 5. In-game, run `/open loading.yml` to open the UI.
 6. If you edit the YAML while the game is running, reopen with `/open loading.yml`.
    - If the resource manager does not pick up changes, use `F3+T` to reload resources.
@@ -57,6 +57,19 @@ events:
 - `draw_background: false` is recommended for HUD overlays.
 - `open_animation: <id>` plays a named animation when the UI opens.
 - `text` and `image` elements support `opacity` (0..1).
+- `entity` elements can render the local player, another player by name, or a UUID target:
+
+```
+- id: "hud_player"
+  type: "entity"
+  target_type: "player"
+  look_at_mouse: false
+  x: 8
+  y: "h - 150"
+  width: 60
+  height: 60
+  entity_scale: 30
+```
 
 JS helpers:
 - `ui.getHealth()`, `ui.getMaxHealth()`, `ui.getFood()`, `ui.getFoodSaturation()`
