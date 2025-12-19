@@ -37,6 +37,11 @@ public class UiScreen extends Screen {
     private boolean movementContextPatched;
     private UiConfig.UiElement hoveredElement;
 
+    // Atlas and instanced rendering
+    private UiTextureAtlas atlas;
+    private UiInstancedRenderer instancedRenderer;
+    private boolean atlasBuilt = false;
+
     public UiScreen(UiConfig config) {
         super(Component.literal(config.title));
         this.config = config;
@@ -63,17 +68,54 @@ public class UiScreen extends Screen {
             if (config.drawBackground) {
                 renderBackgroundWithAlpha(guiGraphics, mouseX, mouseY, partialTick, screenState.alpha);
             }
-            for (UiConfig.UiElement element : elements) {
-                renderElement(guiGraphics, element, 0, 0, width, height, 0.0f, 0.0f, mouseX, mouseY, screenState.alpha, now);
+
+            // Use instanced rendering if enabled
+            if (config.useAtlas && config.shaderRender && instancedRenderer != null) {
+                renderWithInstancing(guiGraphics, mouseX, mouseY, screenState.alpha, now);
+            } else {
+                // Traditional rendering: render each element individually
+                for (UiConfig.UiElement element : elements) {
+                    renderElement(guiGraphics, element, 0, 0, width, height, 0.0f, 0.0f, mouseX, mouseY, screenState.alpha, now);
+                }
             }
         } finally {
             endAnimations(guiGraphics, screenState);
         }
     }
 
+    private void renderWithInstancing(GuiGraphics guiGraphics, int mouseX, int mouseY, float alpha, long now) {
+        // Collect all RECT elements for instanced rendering
+        instancedRenderer.begin();
+
+        for (UiConfig.UiElement element : elements) {
+            if (element.type == UiConfig.UiElement.Type.RECT && isVisible(element)) {
+                int baseX = Math.round(element.x.resolve(width, height, width));
+                int baseY = Math.round(element.y.resolve(width, height, height));
+                int drawX = element.anchorAxis.applyX(baseX, element.width);
+                int drawY = element.anchorAxis.applyY(baseY, element.height);
+
+                // Add to instance batch
+                instancedRenderer.addInstance(
+                    drawX, drawY, element.width, element.height,
+                    0.0f, 0.0f, 1.0f, 1.0f, // UV coords (not used for rects)
+                    element.color,
+                    clampAlpha(alpha * element.opacity)
+                );
+            } else {
+                // Render non-RECT elements normally
+                renderElement(guiGraphics, element, 0, 0, width, height, 0.0f, 0.0f, mouseX, mouseY, alpha, now);
+            }
+        }
+
+        // Render all instances with one draw call
+        instancedRenderer.render();
+    }
+
     @Override
     protected void init() {
         fireOpenEvent();
+        initializeAtlas();
+        initializeInstancedRenderer();
     }
 
     @Override
@@ -1091,6 +1133,58 @@ public class UiScreen extends Screen {
             resetMovementKeys();
             restoreMovementContext();
         }
+        cleanupAtlasAndRenderer();
+    }
+
+    private void initializeAtlas() {
+        if (!config.useAtlas || atlasBuilt) {
+            return;
+        }
+
+        // Collect all texture paths from IMAGE elements
+        List<String> texturePaths = new ArrayList<>();
+        collectTexturePaths(elements, texturePaths);
+
+        if (texturePaths.isEmpty()) {
+            return; // No textures to pack
+        }
+
+        // Build atlas
+        atlas = new UiTextureAtlas(config.atlasSize);
+        atlasBuilt = atlas.build(texturePaths);
+    }
+
+    private void collectTexturePaths(List<UiConfig.UiElement> elementList, List<String> paths) {
+        for (UiConfig.UiElement element : elementList) {
+            if (element.type == UiConfig.UiElement.Type.IMAGE && element.texture != null && !element.texture.isBlank()) {
+                if (!paths.contains(element.texture)) {
+                    paths.add(element.texture);
+                }
+            }
+            if (element.children != null && !element.children.isEmpty()) {
+                collectTexturePaths(element.children, paths);
+            }
+        }
+    }
+
+    private void initializeInstancedRenderer() {
+        if (!config.useAtlas || !config.shaderRender) {
+            return;
+        }
+        instancedRenderer = new UiInstancedRenderer();
+        instancedRenderer.init();
+    }
+
+    private void cleanupAtlasAndRenderer() {
+        if (atlas != null) {
+            atlas.cleanup();
+            atlas = null;
+        }
+        if (instancedRenderer != null) {
+            instancedRenderer.cleanup();
+            instancedRenderer = null;
+        }
+        atlasBuilt = false;
     }
 
     public interface SlotProvider {
