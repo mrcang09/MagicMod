@@ -22,3 +22,5 @@
 - Added Render.Pre cancellation path to fully suppress vanilla screen render when replace_vanilla is true.
 - Added UI open/close events and JS audio playback helpers.
 - Moved UI audio playback into the `audio` module with direct OGG paths under `assets/magicmod/music/` (no `sounds.json`).
+- Added hover actions (`enter`/`leave`), `allow_move`/`override_esc` support, and JS setters for element properties.
+- Added `esc.yml` to replace the pause menu when in-world.

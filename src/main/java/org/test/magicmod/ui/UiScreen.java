@@ -1,5 +1,7 @@
 package org.test.magicmod.ui;
 
+import com.mojang.blaze3d.platform.InputConstants;
+import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
@@ -7,6 +9,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
@@ -24,13 +27,13 @@ public class UiScreen extends Screen {
     private boolean overlayMode;
     private boolean openEventFired;
     private boolean closeEventFired;
+    private UiConfig.UiElement hoveredElement;
 
     public UiScreen(UiConfig config) {
         super(Component.literal(config.title));
         this.config = config;
-        this.elements = config.elements.stream()
-            .sorted(Comparator.comparingInt(element -> element.z))
-            .toList();
+        this.elements = new ArrayList<>(config.elements);
+        sortElementsByZ();
         this.elementById = indexElements(this.elements);
         this.startTimeMs = System.currentTimeMillis();
     }
@@ -44,6 +47,7 @@ public class UiScreen extends Screen {
     }
 
     public void renderOverlay(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+        updateHoverState(mouseX, mouseY);
         renderBackground(guiGraphics, mouseX, mouseY, partialTick);
         for (UiConfig.UiElement element : elements) {
             renderElement(guiGraphics, element, 0, 0, width, height, 0.0f, 0.0f, mouseX, mouseY);
@@ -58,6 +62,21 @@ public class UiScreen extends Screen {
     @Override
     public boolean isPauseScreen() {
         return false;
+    }
+
+    @Override
+    public void tick() {
+        if (config.allowMove) {
+            updateMovementKeys();
+        }
+    }
+
+    @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (keyCode == 256 && handleEscape()) {
+            return true;
+        }
+        return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     @Override
@@ -102,12 +121,7 @@ public class UiScreen extends Screen {
             return false;
         }
         String actionKey = resolveActionKey(button, Screen.hasShiftDown());
-        String script = element.actions.get(actionKey);
-        if (script == null || script.isBlank()) {
-            return false;
-        }
-        UiScriptEngine.execute(this, script);
-        return true;
+        return runElementAction(element, actionKey);
     }
 
     private void renderElement(GuiGraphics guiGraphics, UiConfig.UiElement element, int originX, int originY,
@@ -254,6 +268,32 @@ public class UiScreen extends Screen {
         if (hovered) {
             guiGraphics.fill(drawX, drawY, drawX + slotWidth, drawY + slotHeight, 0x80FFFFFF);
         }
+    }
+
+    private void updateHoverState(int mouseX, int mouseY) {
+        UiConfig.UiElement current = findHitElement(elements, 0, 0, width, height, 0.0f, 0.0f, mouseX, mouseY);
+        if (current == hoveredElement) {
+            return;
+        }
+        if (hoveredElement != null) {
+            runElementAction(hoveredElement, "leave");
+        }
+        hoveredElement = current;
+        if (hoveredElement != null) {
+            runElementAction(hoveredElement, "enter");
+        }
+    }
+
+    private boolean runElementAction(UiConfig.UiElement element, String actionKey) {
+        if (element == null || actionKey == null) {
+            return false;
+        }
+        String script = element.actions.get(actionKey);
+        if (script == null || script.isBlank()) {
+            return false;
+        }
+        UiScriptEngine.execute(this, script);
+        return true;
     }
 
     private boolean handleScroll(List<UiConfig.UiElement> list, int originX, int originY, int contextWidth,
@@ -521,6 +561,65 @@ public class UiScreen extends Screen {
         return config.replaceVanilla;
     }
 
+    public void setElementProperty(String id, String property, Object value) {
+        if (id == null || property == null) {
+            return;
+        }
+        UiConfig.UiElement element = elementById.get(id);
+        if (element == null) {
+            return;
+        }
+        String key = property.trim().toLowerCase();
+        switch (key) {
+            case "x" -> element.x = UiValue.of(value, element.x != null ? element.x.resolve(width, height, width) : 0.0f);
+            case "y" -> element.y = UiValue.of(value, element.y != null ? element.y.resolve(width, height, height) : 0.0f);
+            case "width" -> element.width = asInt(value, element.width);
+            case "height" -> element.height = asInt(value, element.height);
+            case "z" -> {
+                element.z = asInt(value, element.z);
+                sortElementsByZ();
+            }
+            case "visible" -> visibilityOverrides.put(element, asBoolean(value, element.visible));
+            case "text" -> element.text = asString(value, element.text);
+            case "scale" -> element.scale = asFloat(value, element.scale);
+            case "shadow" -> element.shadow = asBoolean(value, element.shadow);
+            case "align" -> element.align = asString(value, element.align);
+            case "color" -> element.color = UiConfig.parseColor(value, element.color);
+            case "font" -> element.font = asString(value, element.font);
+            case "texture" -> element.texture = asString(value, element.texture);
+            case "u" -> element.u = asInt(value, element.u);
+            case "v" -> element.v = asInt(value, element.v);
+            case "texture_width" -> element.textureWidth = asInt(value, element.textureWidth);
+            case "texture_height" -> element.textureHeight = asInt(value, element.textureHeight);
+            case "fill_color" -> element.fillColor = UiConfig.parseColor(value, element.fillColor);
+            case "bg_color" -> element.backgroundColor = UiConfig.parseColor(value, element.backgroundColor);
+            case "mode" -> element.mode = asString(value, element.mode);
+            case "value" -> element.value = asFloat(value, element.value);
+            case "max" -> element.max = asFloat(value, element.max);
+            case "duration_ms" -> element.durationMs = asInt(value, element.durationMs);
+            case "scroll_direction" -> element.scrollDirection = asString(value, element.scrollDirection);
+            case "scroll_step" -> element.scrollStep = asFloat(value, element.scrollStep);
+            case "scroll_x" -> {
+                element.scrollX = asFloat(value, element.scrollX);
+                ScrollState state = scrollStates.get(element);
+                if (state != null) {
+                    state.x = element.scrollX;
+                }
+            }
+            case "scroll_y" -> {
+                element.scrollY = asFloat(value, element.scrollY);
+                ScrollState state = scrollStates.get(element);
+                if (state != null) {
+                    state.y = element.scrollY;
+                }
+            }
+            case "slot" -> element.slotIndex = asInt(value, element.slotIndex);
+            case "hover_mask", "slot_hover" -> element.hoverMask = asBoolean(value, element.hoverMask);
+            default -> {
+            }
+        }
+    }
+
     public void fireCloseEvent() {
         if (closeEventFired) {
             return;
@@ -542,12 +641,16 @@ public class UiScreen extends Screen {
         runEventScript("open");
     }
 
-    private void runEventScript(String key) {
+    private boolean runEventScript(String key) {
+        if (key == null) {
+            return false;
+        }
         String script = config.events.get(key);
         if (script == null || script.isBlank()) {
-            return;
+            return false;
         }
         UiScriptEngine.execute(this, script);
+        return true;
     }
 
     private Map<String, UiConfig.UiElement> indexElements(List<UiConfig.UiElement> list) {
@@ -584,6 +687,104 @@ public class UiScreen extends Screen {
         };
     }
 
+    private boolean handleEscape() {
+        if (runEventScript("esc") || runEventScript("escape")) {
+            return true;
+        }
+        return config.overrideEsc;
+    }
+
+    private void sortElementsByZ() {
+        elements.sort(Comparator.comparingInt(element -> element.z));
+    }
+
+    private void updateMovementKeys() {
+        if (minecraft == null || minecraft.player == null) {
+            return;
+        }
+        long window = minecraft.getWindow().getWindow();
+        setKeyDown(minecraft.options.keyUp, window);
+        setKeyDown(minecraft.options.keyDown, window);
+        setKeyDown(minecraft.options.keyLeft, window);
+        setKeyDown(minecraft.options.keyRight, window);
+        setKeyDown(minecraft.options.keyJump, window);
+        setKeyDown(minecraft.options.keyShift, window);
+        setKeyDown(minecraft.options.keySprint, window);
+    }
+
+    private void resetMovementKeys() {
+        if (minecraft == null) {
+            return;
+        }
+        setKeyState(minecraft.options.keyUp, false);
+        setKeyState(minecraft.options.keyDown, false);
+        setKeyState(minecraft.options.keyLeft, false);
+        setKeyState(minecraft.options.keyRight, false);
+        setKeyState(minecraft.options.keyJump, false);
+        setKeyState(minecraft.options.keyShift, false);
+        setKeyState(minecraft.options.keySprint, false);
+    }
+
+    private void setKeyDown(KeyMapping mapping, long window) {
+        if (mapping == null) {
+            return;
+        }
+        boolean down = InputConstants.isKeyDown(window, mapping.getKey().getValue());
+        mapping.setDown(down);
+    }
+
+    private void setKeyState(KeyMapping mapping, boolean down) {
+        if (mapping != null) {
+            mapping.setDown(down);
+        }
+    }
+
+    private int asInt(Object value, int fallback) {
+        if (value instanceof Number number) {
+            return number.intValue();
+        }
+        if (value != null) {
+            try {
+                return Integer.parseInt(value.toString());
+            } catch (NumberFormatException ignored) {
+                return fallback;
+            }
+        }
+        return fallback;
+    }
+
+    private float asFloat(Object value, float fallback) {
+        if (value instanceof Number number) {
+            return number.floatValue();
+        }
+        if (value != null) {
+            try {
+                return Float.parseFloat(value.toString());
+            } catch (NumberFormatException ignored) {
+                return fallback;
+            }
+        }
+        return fallback;
+    }
+
+    private boolean asBoolean(Object value, boolean fallback) {
+        if (value instanceof Boolean bool) {
+            return bool;
+        }
+        if (value != null) {
+            return Boolean.parseBoolean(value.toString());
+        }
+        return fallback;
+    }
+
+    private String asString(Object value, String fallback) {
+        if (value == null) {
+            return fallback;
+        }
+        String text = value.toString();
+        return text.isBlank() ? fallback : text;
+    }
+
     @Override
     public void onClose() {
         fireCloseEvent();
@@ -593,6 +794,9 @@ public class UiScreen extends Screen {
     @Override
     public void removed() {
         fireCloseEvent();
+        if (config.allowMove) {
+            resetMovementKeys();
+        }
     }
 
     public interface SlotProvider {

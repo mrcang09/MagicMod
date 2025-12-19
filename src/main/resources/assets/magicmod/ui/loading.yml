@@ -40,6 +40,8 @@ elements:
     actions:
       left_click: "ui.toggle('log_list')"
       right_click: "ui.open('loading.yml')"
+      enter: "ui.set('subtitle', 'text', 'Glyph focused')"
+      leave: "ui.set('subtitle', 'text', 'Loading Arcana...')"
   - id: "progress_bg"
     type: "rect"
     x: "50%"

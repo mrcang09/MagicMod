@@ -29,11 +29,14 @@ Notes:
 actions:
   left_click: "ui.toggle('log_list')"
   right_click: "ui.open('loading.yml')"
+  enter: "ui.set('subtitle', 'text', 'Hover')"
+  leave: "ui.set('subtitle', 'text', 'Loading Arcana...')"
 ```
 
 - Overlay UIs are loaded automatically when these files exist:
   - `inventory.yml` for the player inventory screen.
   - `chest.yml` for chest screens.
+  - `esc.yml` for the in-world pause menu (only when the player is in a world).
 - Use `replace_vanilla: true` if you want to hide the vanilla container rendering.
 - For chest overlays, set `match_titles` to the container title(s) you want to target.
   - Color codes are ignored when matching; `&` and `§` are accepted in config strings.
@@ -44,8 +47,11 @@ actions:
 events:
   open: "ui.playMusic('ui_test.ogg', 0.6, true)"
   close: "ui.stopMusic('ui_test.ogg')"
+  esc: "ui.close()"
 ```
 
+- `allow_move: true` lets the player continue moving while the UI is open.
+- `override_esc: true` stops ESC from closing the screen (use `events.esc` for custom behavior).
 - Audio loads OGG files directly from `assets/<namespace>/music/`.
   - Example file `assets/magicmod/music/ui_test.ogg` can be played with `ui.playMusic('ui_test.ogg', 0.6, true)` or `ui.playMusic('magicmod:music/ui_test.ogg', 0.6, true)`.
   - `ui.playMusic(path, volume, loop, stopAtMs)` uses `stopAtMs` only when `loop` is `false`.

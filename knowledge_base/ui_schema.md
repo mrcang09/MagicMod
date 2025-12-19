@@ -28,9 +28,11 @@ elements:
 Top level:
 - `id`: string, optional.
 - `title`: string, optional, used for the screen title.
+- `allow_move`: boolean, optional; when true the player can keep moving while the UI is open.
+- `override_esc`: boolean, optional; when true ESC won't close the UI (use `events.esc` to handle it).
 - `replace_vanilla`: boolean, optional; when true the UI replaces the vanilla container render.
 - `match_titles`: list of strings, optional; when set, the overlay only applies if the screen title matches.
-- `events`: map of event keys to JS scripts (`open`, `close`).
+- `events`: map of event keys to JS scripts (`open`, `close`, `esc`).
 - `background`: map, optional.
 - `elements`: list, optional.
 
@@ -91,7 +93,9 @@ Slot:
 Actions:
 - `left_click`, `right_click`, `middle_click`
 - `shift_left_click`, `shift_right_click`, `shift_middle_click`
+- `enter`, `leave` (hover)
 
 Notes:
 - `match_titles` ignores color codes. Both `&` and `§` are accepted in the config.
 - `events.open` fires when the UI is initialized; `events.close` fires when it is closed.
+- Use `ui.set(id, property, value)` in scripts to change element properties at runtime.

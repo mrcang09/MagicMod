@@ -23,11 +23,33 @@ public final class UiOverlayManager {
     }
 
     public static void register() {
+        ScreenEvent.Opening.BUS.addListener(UiOverlayManager::onScreenOpening);
         ScreenEvent.Render.Pre.BUS.addListener(UiOverlayManager::onRenderPre);
         ScreenEvent.Render.Post.BUS.addListener(UiOverlayManager::onRender);
         ScreenEvent.MouseButtonPressed.Pre.BUS.addListener(UiOverlayManager::onMousePressed);
         ScreenEvent.MouseScrolled.Pre.BUS.addListener(UiOverlayManager::onMouseScrolled);
         ScreenEvent.Closing.BUS.addListener(UiOverlayManager::onScreenClosed);
+    }
+
+    private static void onScreenOpening(ScreenEvent.Opening event) {
+        Screen screen = event.getScreen();
+        if (screen == null) {
+            return;
+        }
+        if (screen instanceof UiScreen) {
+            return;
+        }
+        if (!isInWorld()) {
+            return;
+        }
+        if (!isPauseScreen(screen)) {
+            return;
+        }
+        try {
+            UiConfig config = UiLoader.load("esc.yml");
+            event.setNewScreen(new UiScreen(config));
+        } catch (Exception ignored) {
+        }
     }
 
     private static boolean onRenderPre(ScreenEvent.Render.Pre event) {
@@ -166,6 +188,16 @@ public final class UiOverlayManager {
             builder.append(ch);
         }
         return builder.toString();
+    }
+
+    private static boolean isInWorld() {
+        Minecraft minecraft = Minecraft.getInstance();
+        return minecraft.level != null && minecraft.player != null && minecraft.gameMode != null;
+    }
+
+    private static boolean isPauseScreen(Screen screen) {
+        String name = screen.getClass().getSimpleName();
+        return name.contains("Pause") || name.contains("IngameMenu") || name.contains("GameMenu");
     }
 
     private record OverlayEntry(String uiName, UiScreen overlay) {

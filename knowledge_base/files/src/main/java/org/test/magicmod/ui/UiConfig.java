@@ -8,16 +8,21 @@ import java.util.Map;
 public final class UiConfig {
     public final String id;
     public final String title;
+    public final boolean allowMove;
+    public final boolean overrideEsc;
     public final boolean replaceVanilla;
     public final List<String> matchTitles;
     public final Map<String, String> events;
     public final UiBackground background;
     public final List<UiElement> elements;
 
-    private UiConfig(String id, String title, boolean replaceVanilla, List<String> matchTitles,
-                     Map<String, String> events, UiBackground background, List<UiElement> elements) {
+    private UiConfig(String id, String title, boolean allowMove, boolean overrideEsc, boolean replaceVanilla,
+                     List<String> matchTitles, Map<String, String> events, UiBackground background,
+                     List<UiElement> elements) {
         this.id = id;
         this.title = title;
+        this.allowMove = allowMove;
+        this.overrideEsc = overrideEsc;
         this.replaceVanilla = replaceVanilla;
         this.matchTitles = matchTitles;
         this.events = events;
@@ -28,12 +33,14 @@ public final class UiConfig {
     static UiConfig fromMap(Map<String, Object> root) {
         String id = getString(root, "id", "ui");
         String title = getString(root, "title", id);
+        boolean allowMove = getBoolean(root, "allow_move", false);
+        boolean overrideEsc = getBoolean(root, "override_esc", false);
         boolean replaceVanilla = getBoolean(root, "replace_vanilla", false);
         List<String> matchTitles = getStringList(root, "match_titles");
         Map<String, String> events = parseActions(getMap(root, "events"));
         UiBackground background = UiBackground.fromMap(getMap(root, "background"));
         List<UiElement> elements = parseElements(getList(root, "elements"));
-        return new UiConfig(id, title, replaceVanilla, matchTitles, events, background, elements);
+        return new UiConfig(id, title, allowMove, overrideEsc, replaceVanilla, matchTitles, events, background, elements);
     }
 
     private static List<UiElement> parseElements(List<Object> rawElements) {
@@ -89,44 +96,44 @@ public final class UiConfig {
             SLOT
         }
 
-        final String id;
-        final Type type;
-        final UiValue x;
-        final UiValue y;
-        final int width;
-        final int height;
-        final UiAnchor anchor;
-        final int z;
-        final boolean visible;
-        final Map<String, String> actions;
+        String id;
+        Type type;
+        UiValue x;
+        UiValue y;
+        int width;
+        int height;
+        UiAnchor anchor;
+        int z;
+        boolean visible;
+        Map<String, String> actions;
 
-        final String text;
-        final float scale;
-        final boolean shadow;
-        final String align;
-        final int color;
-        final String font;
+        String text;
+        float scale;
+        boolean shadow;
+        String align;
+        int color;
+        String font;
 
-        final String texture;
-        final int u;
-        final int v;
-        final int textureWidth;
-        final int textureHeight;
+        String texture;
+        int u;
+        int v;
+        int textureWidth;
+        int textureHeight;
 
-        final int fillColor;
-        final int backgroundColor;
-        final String mode;
-        final float value;
-        final float max;
-        final int durationMs;
+        int fillColor;
+        int backgroundColor;
+        String mode;
+        float value;
+        float max;
+        int durationMs;
 
-        final List<UiElement> children;
-        final String scrollDirection;
-        final float scrollStep;
-        final float scrollX;
-        final float scrollY;
-        final int slotIndex;
-        final boolean hoverMask;
+        List<UiElement> children;
+        String scrollDirection;
+        float scrollStep;
+        float scrollX;
+        float scrollY;
+        int slotIndex;
+        boolean hoverMask;
 
         private UiElement(String id, Type type, UiValue x, UiValue y, int width, int height, UiAnchor anchor, int z,
                           boolean visible, Map<String, String> actions,

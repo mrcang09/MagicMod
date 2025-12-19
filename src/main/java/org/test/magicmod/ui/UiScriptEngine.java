@@ -46,6 +46,10 @@ public final class UiScriptEngine {
             screen.toggleElement(id);
         }
 
+        public void set(String id, String property, Object value) {
+            screen.setElementProperty(id, property, value);
+        }
+
         public void close() {
             Minecraft.getInstance().setScreen(null);
         }
