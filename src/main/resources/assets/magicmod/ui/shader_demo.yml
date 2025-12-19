@@ -1,7 +1,7 @@
 id: "shader_demo"
 title: "Shader Rendering Demo"
 # Enable GPU shader rendering (false = CPU rendering, true = GPU rendering)
-shader_render: false
+shader_render: true
 allow_move: true
 background:
   color: "#0d1117"

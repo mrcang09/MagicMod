@@ -63,7 +63,8 @@ public final class UiHudManager {
         ForgeLayeredDraw post = layeredDraw.getChild(ForgeLayeredDraw.POST_SLEEP_STACK);
         if (post != null) {
             post.addConditionTo(ForgeLayeredDraw.DEMO_OVERLAY, UiHudManager::shouldAllowVanillaHud);
-            post.addConditionTo(ForgeLayeredDraw.DEBUG_OVERLAY, UiHudManager::shouldAllowVanillaHud);
+            // DEBUG_OVERLAY (F3) should always be visible - don't add condition
+            // post.addConditionTo(ForgeLayeredDraw.DEBUG_OVERLAY, UiHudManager::shouldAllowVanillaHud);
             post.addConditionTo(ForgeLayeredDraw.SCOREBOARD, UiHudManager::shouldAllowVanillaHud);
             post.addConditionTo(ForgeLayeredDraw.HOTBAR_MESSAGE, UiHudManager::shouldAllowVanillaHud);
             post.addConditionTo(ForgeLayeredDraw.TITLE_OVERLAY, UiHudManager::shouldAllowVanillaHud);
