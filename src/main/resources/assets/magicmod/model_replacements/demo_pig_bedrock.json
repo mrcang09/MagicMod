@@ -1,0 +1,16 @@
+{
+  "id": "magicmod:demo_pig_bedrock",
+  "priority": 10,
+  "target": {
+    "type": "entity_type",
+    "entity": "minecraft:pig"
+  },
+  "model": {
+    "format": "bedrock",
+    "geometry": "magicmod:entity_models/bedrock/test_creature.geo.json",
+    "texture": "minecraft:textures/block/copper_block.png",
+    "animation": "magicmod:entity_models/bedrock/test_creature.animation.json",
+    "render_mode": "cutout"
+  },
+  "default_animation": "animation.magicmod.test_creature.idle"
+}

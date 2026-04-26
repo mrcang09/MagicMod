@@ -37,3 +37,8 @@
 - Added entity fields to UI schema/runtime setters and render path integration (works in shader/atlas mode by using non-instanced fallback).
 - Added local player entity to `hud.yml`.
 - Added `run_client_java.bat` to set JAVA_HOME and launch the client.
+- Upgraded the target toolchain to Minecraft `1.21.11` and Forge `61.1.3`.
+- Fixed Windows launcher scripts to auto-detect a local JDK instead of relying on hard-coded paths.
+- Fixed UI texture lifecycle issues by releasing atlas textures from `TextureManager` during screen cleanup.
+- Added GIF cache cleanup hooks for client resource reload and logout to avoid leaked dynamic textures.
+- Added audit/roadmap docs for module call chains, memory risks, and the Bedrock model replacement plan.

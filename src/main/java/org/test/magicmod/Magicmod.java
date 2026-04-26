@@ -27,9 +27,12 @@ import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
 import org.test.magicmod.audio.AudioController;
+import org.test.magicmod.client.ClientSmokeTest;
 import org.test.magicmod.client.ClientUiCommands;
 import org.test.magicmod.client.UiHudManager;
 import org.test.magicmod.client.UiOverlayManager;
+import org.test.magicmod.model.ClientModelReplacementSystem;
+import org.test.magicmod.ui.GifManager;
 import org.slf4j.Logger;
 
 // The value here should match an entry in the META-INF/mods.toml file
@@ -86,7 +89,10 @@ public class Magicmod {
             ClientUiCommands.register();
             UiOverlayManager.register();
             AudioController.register();
+            GifManager.register(modBusGroup);
             UiHudManager.register(modBusGroup);
+            ClientSmokeTest.register();
+            ClientModelReplacementSystem.register(modBusGroup);
         }
     }
 

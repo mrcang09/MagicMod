@@ -3,8 +3,10 @@ package org.test.magicmod.client;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.gui.screens.inventory.ContainerScreen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.inventory.ChestMenu;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.client.event.ScreenEvent;
@@ -48,6 +50,9 @@ public final class UiOverlayManager {
         try {
             UiConfig config = UiLoader.load("esc.yml");
             event.setNewScreen(new UiScreen(config));
+            if (ClientSmokeTest.isEnabled()) {
+                org.test.magicmod.Magicmod.LOGGER.info("[SMOKE] Replaced pause screen with esc.yml");
+            }
         } catch (Exception ignored) {
         }
     }
@@ -90,7 +95,7 @@ public final class UiOverlayManager {
         if (entry == null || entry.overlay == null) {
             return;
         }
-        entry.overlay.fireCloseEvent();
+        entry.overlay.removed();
     }
 
     public static UiScreen getOverlayFor(Screen screen) {
@@ -116,6 +121,9 @@ public final class UiOverlayManager {
             overlay.setOverlayMode(true);
             entry = new OverlayEntry(uiName, overlay);
             OVERLAYS.put(screen, entry);
+            if (ClientSmokeTest.isEnabled()) {
+                org.test.magicmod.Magicmod.LOGGER.info("[SMOKE] Built overlay {} for {}", uiName, screen.getClass().getSimpleName());
+            }
         }
 
         if (entry.overlay == null) {
@@ -124,7 +132,11 @@ public final class UiOverlayManager {
         Minecraft minecraft = Minecraft.getInstance();
         int width = minecraft.getWindow().getGuiScaledWidth();
         int height = minecraft.getWindow().getGuiScaledHeight();
-        entry.overlay.init(minecraft, width, height);
+        if (entry.overlay.width != width || entry.overlay.height != height) {
+            entry.overlay.init(width, height);
+        } else if (entry.overlay.width == 0 || entry.overlay.height == 0) {
+            entry.overlay.init(width, height);
+        }
         entry.overlay.setSlotProvider(buildSlotProvider(screen));
         return entry.overlay;
     }
@@ -132,6 +144,9 @@ public final class UiOverlayManager {
     private static UiMatch resolveUiMatch(Screen screen) {
         if (screen instanceof InventoryScreen) {
             return new UiMatch("inventory.yml", null);
+        }
+        if (screen instanceof ContainerScreen container && container.getMenu() instanceof ChestMenu) {
+            return new UiMatch("chest.yml", screen.getTitle());
         }
         String className = screen.getClass().getSimpleName();
         if (className.contains("ChestScreen")) {

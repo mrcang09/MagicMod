@@ -2,7 +2,7 @@
   "required": true,
   "minVersion": "0.8",
   "package": "org.test.magicmod.mixin",
-  "compatibilityLevel": "JAVA_8",
+  "compatibilityLevel": "JAVA_21",
   "refmap": "magicmod.refmap.json",
   "mixins": [
   ],

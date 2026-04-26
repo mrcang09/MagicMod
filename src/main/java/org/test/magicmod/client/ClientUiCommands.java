@@ -31,8 +31,7 @@ public final class ClientUiCommands {
                 .executes(context -> {
                     String uiName = StringArgumentType.getString(context, "ui");
                     try {
-                        UiConfig config = UiLoader.load(uiName);
-                        Minecraft.getInstance().setScreen(new UiScreen(config));
+                        openUi(uiName);
                         context.getSource().sendSuccess(() -> Component.literal("Opened UI: " + uiName), false);
                         return 1;
                     } catch (IOException error) {
@@ -40,6 +39,11 @@ public final class ClientUiCommands {
                         return 0;
                     }
                 })));
+    }
+
+    public static void openUi(String uiName) throws IOException {
+        UiConfig config = UiLoader.load(uiName);
+        Minecraft.getInstance().setScreen(new UiScreen(config));
     }
 
     private static List<String> suggestUiFiles() {

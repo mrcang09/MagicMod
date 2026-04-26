@@ -1,14 +1,18 @@
 package org.test.magicmod.ui;
 
 import com.mojang.blaze3d.platform.InputConstants;
+import com.mojang.blaze3d.platform.Window;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.network.chat.FontDescription;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.ARGB;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.entity.Entity;
@@ -138,11 +142,11 @@ public class UiScreen extends Screen {
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (keyCode == 256 && handleEscape()) {
+    public boolean keyPressed(KeyEvent event) {
+        if (event.key() == InputConstants.KEY_ESCAPE && handleEscape()) {
             return true;
         }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        return super.keyPressed(event);
     }
 
     @Override
@@ -161,7 +165,7 @@ public class UiScreen extends Screen {
             guiGraphics.fill(0, 0, width, height, applyAlpha(background.color, clampedAlpha));
         }
         if (background.texture != null && !background.texture.isBlank()) {
-            ResourceLocation texture = parseLocation(background.texture);
+            Identifier texture = parseLocation(background.texture);
             if (texture != null) {
                 renderImageWithAlpha(guiGraphics, texture, 0, 0, width, height, 0, 0,
                     background.textureWidth, background.textureHeight, clampedAlpha);
@@ -178,11 +182,11 @@ public class UiScreen extends Screen {
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (handleMouseClick(mouseX, mouseY, button)) {
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        if (handleMouseClick(event.x(), event.y(), event.button(), isShiftDown(event.modifiers()))) {
             return true;
         }
-        return super.mouseClicked(mouseX, mouseY, button);
+        return super.mouseClicked(event, doubleClick);
     }
 
     public boolean handleMouseScroll(double mouseX, double mouseY, double deltaX, double deltaY) {
@@ -190,11 +194,15 @@ public class UiScreen extends Screen {
     }
 
     public boolean handleMouseClick(double mouseX, double mouseY, int button) {
+        return handleMouseClick(mouseX, mouseY, button, isShiftDown());
+    }
+
+    public boolean handleMouseClick(double mouseX, double mouseY, int button, boolean shiftDown) {
         UiConfig.UiElement element = findHitElement(elements, 0, 0, width, height, 0.0f, 0.0f, mouseX, mouseY);
         if (element == null) {
             return false;
         }
-        String actionKey = resolveActionKey(button, Screen.hasShiftDown());
+        String actionKey = resolveActionKey(button, shiftDown);
         return runElementAction(element, actionKey);
     }
 
@@ -259,7 +267,7 @@ public class UiScreen extends Screen {
         if (element.width <= 0 || element.height <= 0) {
             return;
         }
-        ResourceLocation texture = parseLocation(element.texture);
+        Identifier texture = parseLocation(element.texture);
         if (texture == null) {
             return;
         }
@@ -444,7 +452,7 @@ public class UiScreen extends Screen {
         if (player == null || playerName == null) {
             return false;
         }
-        String profileName = player.getGameProfile().getName();
+        String profileName = player.getGameProfile().name();
         if (profileName != null && profileName.equalsIgnoreCase(playerName)) {
             return true;
         }
@@ -713,11 +721,11 @@ public class UiScreen extends Screen {
         if ("original".equalsIgnoreCase(fontName)) {
             return component;
         }
-        ResourceLocation fontId = parseFontLocation(fontName);
+        Identifier fontId = parseFontLocation(fontName);
         if (fontId == null) {
             return component;
         }
-        return component.withStyle(style -> style.withFont(fontId));
+        return component.withStyle(style -> style.withFont(new FontDescription.Resource(fontId)));
     }
 
     private String resolveText(String raw) {
@@ -772,7 +780,7 @@ public class UiScreen extends Screen {
         return String.format(java.util.Locale.ROOT, "%.1f", value);
     }
 
-    private ResourceLocation parseFontLocation(String raw) {
+    private Identifier parseFontLocation(String raw) {
         String value = raw.trim();
         if (!value.contains(":")) {
             value = "magicmod:" + value;
@@ -780,9 +788,9 @@ public class UiScreen extends Screen {
         return parseLocation(value);
     }
 
-    private ResourceLocation parseLocation(String raw) {
+    private Identifier parseLocation(String raw) {
         try {
-            return ResourceLocation.parse(raw);
+            return Identifier.parse(raw);
         } catch (Exception ignored) {
             return null;
         }
@@ -1024,7 +1032,7 @@ public class UiScreen extends Screen {
         if (minecraft == null || minecraft.player == null) {
             return;
         }
-        long window = minecraft.getWindow().getWindow();
+        Window window = minecraft.getWindow();
         setKeyDown(minecraft.options.keyUp, window);
         setKeyDown(minecraft.options.keyDown, window);
         setKeyDown(minecraft.options.keyLeft, window);
@@ -1158,7 +1166,7 @@ public class UiScreen extends Screen {
         }
     }
 
-    private void renderImageWithAlpha(GuiGraphics guiGraphics, ResourceLocation texture, int x, int y, int width,
+    private void renderImageWithAlpha(GuiGraphics guiGraphics, Identifier texture, int x, int y, int width,
                                       int height, int u, int v, int textureWidth, int textureHeight, float alpha) {
         float clampedAlpha = clampAlpha(alpha);
         int color = clampedAlpha >= 0.999f ? -1 : ARGB.colorFromFloat(clampedAlpha, 1.0f, 1.0f, 1.0f);
@@ -1185,12 +1193,28 @@ public class UiScreen extends Screen {
         return start + (end - start) * progress;
     }
 
-    private void setKeyDown(KeyMapping mapping, long window) {
+    private void setKeyDown(KeyMapping mapping, Window window) {
         if (mapping == null) {
             return;
         }
         boolean down = InputConstants.isKeyDown(window, mapping.getKey().getValue());
         mapping.setDown(down);
+    }
+
+    private boolean isShiftDown() {
+        if (minecraft == null) {
+            return false;
+        }
+        return isShiftDown(minecraft.getWindow());
+    }
+
+    private boolean isShiftDown(int modifiers) {
+        return (modifiers & InputConstants.MOD_SHIFT) != 0;
+    }
+
+    private boolean isShiftDown(Window window) {
+        return InputConstants.isKeyDown(window, InputConstants.KEY_LSHIFT)
+            || InputConstants.isKeyDown(window, InputConstants.KEY_RSHIFT);
     }
 
     private void setKeyState(KeyMapping mapping, boolean down) {
@@ -1258,6 +1282,12 @@ public class UiScreen extends Screen {
             resetMovementKeys();
             restoreMovementContext();
         }
+        hoveredElement = null;
+        slotProvider = null;
+        activeAnimations.clear();
+        visibilityOverrides.clear();
+        scrollStates.clear();
+        movementConflictContexts.clear();
         cleanupAtlasAndRenderer();
     }
 

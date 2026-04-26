@@ -1,7 +1,7 @@
 package org.test.magicmod.ui;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraftforge.fml.loading.FMLPaths;
 import org.test.magicmod.Magicmod;
@@ -29,7 +29,7 @@ public final class UiLoader {
                 return loadFromReader(reader);
             }
         }
-        ResourceLocation location = ResourceLocation.parse(Magicmod.MODID + ":ui/" + fileName);
+        Identifier location = Identifier.parse(Magicmod.MODID + ":ui/" + fileName);
         ResourceManager resourceManager = Minecraft.getInstance().getResourceManager();
         try (Reader reader = resourceManager.openAsReader(location)) {
             return loadFromReader(reader);
@@ -38,11 +38,11 @@ public final class UiLoader {
 
     public static List<String> listUiFiles() {
         ResourceManager resourceManager = Minecraft.getInstance().getResourceManager();
-        Map<ResourceLocation, ?> resources = resourceManager.listResources("ui",
+        Map<Identifier, ?> resources = resourceManager.listResources("ui",
             id -> id.getNamespace().equals(Magicmod.MODID)
                 && (id.getPath().endsWith(".yml") || id.getPath().endsWith(".yaml")));
         return resources.keySet().stream()
-            .map(ResourceLocation::getPath)
+            .map(Identifier::getPath)
             .map(path -> path.startsWith("ui/") ? path.substring(3) : path)
             .sorted(Comparator.naturalOrder())
             .collect(Collectors.toList());

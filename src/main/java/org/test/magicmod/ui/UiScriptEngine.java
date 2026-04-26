@@ -2,7 +2,7 @@ package org.test.magicmod.ui;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.core.Holder;
@@ -175,9 +175,9 @@ public final class UiScriptEngine {
             if (player == null || attributeId == null || attributeId.isBlank()) {
                 return 0.0;
             }
-            ResourceLocation location;
+            Identifier location;
             try {
-                location = ResourceLocation.parse(attributeId.trim());
+                location = Identifier.parse(attributeId.trim());
             } catch (Exception ignored) {
                 return 0.0;
             }

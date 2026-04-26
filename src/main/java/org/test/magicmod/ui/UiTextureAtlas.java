@@ -3,7 +3,7 @@ package org.test.magicmod.ui;
 import com.mojang.blaze3d.platform.NativeImage;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.texture.DynamicTexture;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.Resource;
 import org.test.magicmod.Magicmod;
 
@@ -23,7 +23,7 @@ public class UiTextureAtlas {
     private final Map<String, AtlasRegion> regions = new HashMap<>();
     private NativeImage atlasImage;
     private DynamicTexture dynamicTexture;
-    private ResourceLocation atlasLocation;
+    private Identifier atlasLocation;
     private boolean built = false;
 
     public UiTextureAtlas(int atlasSize) {
@@ -62,7 +62,7 @@ public class UiTextureAtlas {
                     continue;
                 }
 
-                ResourceLocation location = parseLocation(texturePath);
+                Identifier location = parseLocation(texturePath);
                 if (location == null) {
                     continue;
                 }
@@ -72,50 +72,52 @@ public class UiTextureAtlas {
                     continue;
                 }
 
-                int width = sourceImage.getWidth();
-                int height = sourceImage.getHeight();
+                try {
+                    int width = sourceImage.getWidth();
+                    int height = sourceImage.getHeight();
 
-                // Check if we need to move to next row
-                if (currentX + width > atlasSize) {
-                    currentX = 0;
-                    currentY += rowHeight;
-                    rowHeight = 0;
-                }
-
-                // Check if we have space
-                if (currentY + height > atlasSize) {
-                    sourceImage.close();
-                    continue; // Skip this texture, atlas is full
-                }
-
-                // Copy pixels to atlas
-                for (int x = 0; x < width; x++) {
-                    for (int y = 0; y < height; y++) {
-                        int pixel = sourceImage.getPixel(x, y);
-                        atlasImage.setPixel(currentX + x, currentY + y, pixel);
+                    // Check if we need to move to next row
+                    if (currentX + width > atlasSize) {
+                        currentX = 0;
+                        currentY += rowHeight;
+                        rowHeight = 0;
                     }
+
+                    // Check if we have space
+                    if (currentY + height > atlasSize) {
+                        continue; // Skip this texture, atlas is full
+                    }
+
+                    // Copy pixels to atlas
+                    for (int x = 0; x < width; x++) {
+                        for (int y = 0; y < height; y++) {
+                            int pixel = sourceImage.getPixel(x, y);
+                            atlasImage.setPixel(currentX + x, currentY + y, pixel);
+                        }
+                    }
+
+                    // Store region info
+                    regions.put(texturePath, new AtlasRegion(currentX, currentY, width, height));
+
+                    // Update position
+                    currentX += width;
+                    rowHeight = Math.max(rowHeight, height);
+                } finally {
+                    sourceImage.close();
                 }
-
-                // Store region info
-                regions.put(texturePath, new AtlasRegion(currentX, currentY, width, height));
-
-                // Update position
-                currentX += width;
-                rowHeight = Math.max(rowHeight, height);
-
-                sourceImage.close();
             }
 
             // Upload to GPU
             Minecraft minecraft = Minecraft.getInstance();
             dynamicTexture = new DynamicTexture(() -> "ui_atlas_" + System.currentTimeMillis(), atlasImage);
-            atlasLocation = ResourceLocation.fromNamespaceAndPath(Magicmod.MODID, "ui_atlas_" + System.currentTimeMillis());
+            atlasLocation = Identifier.fromNamespaceAndPath(Magicmod.MODID, "ui_atlas_" + System.currentTimeMillis());
             minecraft.getTextureManager().register(atlasLocation, dynamicTexture);
 
             built = true;
             return true;
         } catch (Exception e) {
             Magicmod.LOGGER.error("Failed to build texture atlas", e);
+            cleanup();
             return false;
         }
     }
@@ -123,7 +125,7 @@ public class UiTextureAtlas {
     /**
      * Get the atlas texture location
      */
-    public ResourceLocation getAtlasLocation() {
+    public Identifier getAtlasLocation() {
         return atlasLocation;
     }
 
@@ -152,19 +154,25 @@ public class UiTextureAtlas {
      * Cleanup resources
      */
     public void cleanup() {
-        if (atlasImage != null) {
-            atlasImage.close();
+        Minecraft minecraft = Minecraft.getInstance();
+        if (atlasLocation != null && minecraft != null) {
+            minecraft.getTextureManager().release(atlasLocation);
+            atlasLocation = null;
+            dynamicTexture = null;
             atlasImage = null;
-        }
-        if (dynamicTexture != null) {
+        } else if (dynamicTexture != null) {
             dynamicTexture.close();
             dynamicTexture = null;
+            atlasImage = null;
+        } else if (atlasImage != null) {
+            atlasImage.close();
+            atlasImage = null;
         }
         regions.clear();
         built = false;
     }
 
-    private NativeImage loadImage(ResourceLocation location) {
+    private NativeImage loadImage(Identifier location) {
         try {
             Minecraft minecraft = Minecraft.getInstance();
             Resource resource = minecraft.getResourceManager().getResource(location).orElse(null);
@@ -179,14 +187,14 @@ public class UiTextureAtlas {
         }
     }
 
-    private ResourceLocation parseLocation(String path) {
+    private Identifier parseLocation(String path) {
         if (path == null || path.isBlank()) {
             return null;
         }
         if (path.contains(":")) {
-            return ResourceLocation.parse(path);
+            return Identifier.parse(path);
         }
-        return ResourceLocation.fromNamespaceAndPath(Magicmod.MODID, path);
+        return Identifier.fromNamespaceAndPath(Magicmod.MODID, path);
     }
 
     /**

@@ -3,9 +3,12 @@ package org.test.magicmod.client;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
 import net.minecraft.world.item.ItemStack;
+import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
 import net.minecraftforge.client.event.AddGuiOverlayLayersEvent;
+import net.minecraftforge.client.event.RegisterClientReloadListenersEvent;
 import net.minecraftforge.client.gui.overlay.ForgeLayeredDraw;
 import net.minecraftforge.eventbus.api.bus.BusGroup;
 import org.test.magicmod.Magicmod;
@@ -16,7 +19,7 @@ import org.test.magicmod.ui.UiScreen;
 import java.io.IOException;
 
 public final class UiHudManager {
-    private static final ResourceLocation HUD_LAYER = ResourceLocation.fromNamespaceAndPath(Magicmod.MODID, "hud_layer");
+    private static final Identifier HUD_LAYER = Identifier.fromNamespaceAndPath(Magicmod.MODID, "hud_layer");
     private static UiConfig hudConfig;
     private static UiScreen hudScreen;
     private static boolean loadFailed;
@@ -26,12 +29,18 @@ public final class UiHudManager {
 
     public static void register(BusGroup modBusGroup) {
         AddGuiOverlayLayersEvent.getBus(modBusGroup).addListener(UiHudManager::onAddGuiLayers);
+        RegisterClientReloadListenersEvent.getBus(modBusGroup).addListener(UiHudManager::onRegisterReloadListeners);
+        ClientPlayerNetworkEvent.LoggingOut.BUS.addListener(event -> clearHudCache());
     }
 
     private static void onAddGuiLayers(AddGuiOverlayLayersEvent event) {
         ForgeLayeredDraw layeredDraw = event.getLayeredDraw();
         layeredDraw.addAbove(ForgeLayeredDraw.VANILLA_ROOT, HUD_LAYER, ForgeLayeredDraw.POST_SLEEP_STACK, UiHudManager::renderHud);
         disableVanillaHudLayers(layeredDraw);
+    }
+
+    private static void onRegisterReloadListeners(RegisterClientReloadListenersEvent event) {
+        event.registerReloadListener((ResourceManagerReloadListener) resourceManager -> clearHudCache());
     }
 
     private static void renderHud(GuiGraphics guiGraphics, DeltaTracker deltaTracker) {
@@ -110,6 +119,15 @@ public final class UiHudManager {
         return hudConfig;
     }
 
+    private static void clearHudCache() {
+        if (hudScreen != null) {
+            hudScreen.removed();
+            hudScreen = null;
+        }
+        hudConfig = null;
+        loadFailed = false;
+    }
+
     private static UiScreen getHudScreen() {
         UiConfig config = getHudConfig();
         if (config == null) {
@@ -123,7 +141,11 @@ public final class UiHudManager {
         Minecraft minecraft = Minecraft.getInstance();
         int width = minecraft.getWindow().getGuiScaledWidth();
         int height = minecraft.getWindow().getGuiScaledHeight();
-        hudScreen.init(minecraft, width, height);
+        if (hudScreen.width != width || hudScreen.height != height) {
+            hudScreen.init(width, height);
+        } else if (hudScreen.width == 0 || hudScreen.height == 0) {
+            hudScreen.init(width, height);
+        }
         return hudScreen;
     }
 

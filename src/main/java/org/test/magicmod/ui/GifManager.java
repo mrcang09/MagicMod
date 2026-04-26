@@ -4,9 +4,13 @@ import com.mojang.blaze3d.platform.NativeImage;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.client.renderer.texture.TextureManager;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
+import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
+import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
+import net.minecraftforge.client.event.RegisterClientReloadListenersEvent;
+import net.minecraftforge.eventbus.api.bus.BusGroup;
 import org.test.magicmod.Magicmod;
 
 import javax.imageio.ImageIO;
@@ -25,12 +29,17 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class GifManager {
-    private static final Map<ResourceLocation, GifTexture> CACHE = new ConcurrentHashMap<>();
+    private static final Map<Identifier, GifTexture> CACHE = new ConcurrentHashMap<>();
 
     private GifManager() {
     }
 
-    public static GifFrame getFrame(ResourceLocation location) {
+    public static void register(BusGroup modBusGroup) {
+        RegisterClientReloadListenersEvent.getBus(modBusGroup).addListener(GifManager::onRegisterReloadListeners);
+        ClientPlayerNetworkEvent.LoggingOut.BUS.addListener(event -> clearCache());
+    }
+
+    public static GifFrame getFrame(Identifier location) {
         GifTexture texture = CACHE.computeIfAbsent(location, GifManager::load);
         if (texture == null) {
             return null;
@@ -38,43 +47,74 @@ public final class GifManager {
         return texture.getFrame(System.currentTimeMillis());
     }
 
-    private static GifTexture load(ResourceLocation location) {
+    public static void clearCache() {
+        Minecraft minecraft = Minecraft.getInstance();
+        TextureManager textureManager = minecraft != null ? minecraft.getTextureManager() : null;
+        for (GifTexture texture : CACHE.values()) {
+            if (texture != null) {
+                texture.release(textureManager);
+            }
+        }
+        CACHE.clear();
+    }
+
+    private static void onRegisterReloadListeners(RegisterClientReloadListenersEvent event) {
+        event.registerReloadListener((ResourceManagerReloadListener) resourceManager -> clearCache());
+    }
+
+    private static GifTexture load(Identifier location) {
         ResourceManager resourceManager = Minecraft.getInstance().getResourceManager();
         Optional<Resource> resource = resourceManager.getResource(location);
         if (resource.isEmpty()) {
             return null;
         }
+        List<Identifier> frameLocations = new ArrayList<>();
         try (InputStream stream = resource.get().open(); ImageInputStream imageStream = ImageIO.createImageInputStream(stream)) {
             Iterator<ImageReader> readers = ImageIO.getImageReadersByFormatName("gif");
             if (!readers.hasNext()) {
                 return null;
             }
             ImageReader reader = readers.next();
-            reader.setInput(imageStream, false);
-            int frameCount = reader.getNumImages(true);
-            if (frameCount <= 0) {
-                return null;
-            }
-            List<GifFrame> frames = new ArrayList<>();
-            List<Integer> delays = new ArrayList<>();
-            TextureManager textureManager = Minecraft.getInstance().getTextureManager();
-            String key = sanitizeKey(location.toString());
+            try {
+                reader.setInput(imageStream, false);
+                int frameCount = reader.getNumImages(true);
+                if (frameCount <= 0) {
+                    return null;
+                }
+                List<GifFrame> frames = new ArrayList<>();
+                List<Integer> delays = new ArrayList<>();
+                TextureManager textureManager = Minecraft.getInstance().getTextureManager();
+                String key = sanitizeKey(location.toString());
 
-            for (int i = 0; i < frameCount; i++) {
-                BufferedImage image = reader.read(i);
-                int delay = readDelay(reader.getImageMetadata(i));
-                NativeImage nativeImage = toNativeImage(image);
-                DynamicTexture dynamicTexture = new DynamicTexture(() -> "magicmod_gif", nativeImage);
-                ResourceLocation frameLocation = ResourceLocation.fromNamespaceAndPath(Magicmod.MODID,
-                    "gif/" + key + "/" + i);
-                textureManager.register(frameLocation, dynamicTexture);
-                frames.add(new GifFrame(frameLocation, image.getWidth(), image.getHeight()));
-                delays.add(delay);
+                for (int i = 0; i < frameCount; i++) {
+                    BufferedImage image = reader.read(i);
+                    int delay = readDelay(reader.getImageMetadata(i));
+                    NativeImage nativeImage = toNativeImage(image);
+                    DynamicTexture dynamicTexture = new DynamicTexture(() -> "magicmod_gif", nativeImage);
+                    Identifier frameLocation = Identifier.fromNamespaceAndPath(Magicmod.MODID,
+                        "gif/" + key + "/" + i);
+                    textureManager.register(frameLocation, dynamicTexture);
+                    frames.add(new GifFrame(frameLocation, image.getWidth(), image.getHeight()));
+                    delays.add(delay);
+                    frameLocations.add(frameLocation);
+                }
+                return new GifTexture(frames, delays, frameLocations);
+            } finally {
+                reader.dispose();
             }
-            reader.dispose();
-            return new GifTexture(frames, delays);
-        } catch (IOException ignored) {
+        } catch (IOException | RuntimeException ignored) {
+            releaseFrameLocations(frameLocations);
             return null;
+        }
+    }
+
+    private static void releaseFrameLocations(List<Identifier> frameLocations) {
+        if (frameLocations.isEmpty()) {
+            return;
+        }
+        TextureManager textureManager = Minecraft.getInstance().getTextureManager();
+        for (Identifier frameLocation : frameLocations) {
+            textureManager.release(frameLocation);
         }
     }
 
@@ -125,11 +165,13 @@ public final class GifManager {
     private static final class GifTexture {
         private final List<GifFrame> frames;
         private final List<Integer> delays;
+        private final List<Identifier> frameLocations;
         private final int durationMs;
 
-        private GifTexture(List<GifFrame> frames, List<Integer> delays) {
+        private GifTexture(List<GifFrame> frames, List<Integer> delays, List<Identifier> frameLocations) {
             this.frames = frames;
             this.delays = delays;
+            this.frameLocations = frameLocations;
             int total = 0;
             for (int delay : delays) {
                 total += delay;
@@ -148,8 +190,17 @@ public final class GifManager {
             }
             return frames.get(frames.size() - 1);
         }
+
+        private void release(TextureManager textureManager) {
+            if (textureManager == null) {
+                return;
+            }
+            for (Identifier frameLocation : frameLocations) {
+                textureManager.release(frameLocation);
+            }
+        }
     }
 
-    public record GifFrame(ResourceLocation location, int width, int height) {
+    public record GifFrame(Identifier location, int width, int height) {
     }
 }

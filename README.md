@@ -1,6 +1,6 @@
 # MagicMod
 
-一个基于 **Minecraft Forge 1.21.8** 的实验性 Mod，核心目标是提供「类似 DragonCore 的 YAML 驱动 UI 系统」，支持快速热迭代、脚本交互和可选 GPU 渲染优化。
+一个基于 **Minecraft Forge 1.21.11** 的实验性 Mod，核心目标是提供「类似 DragonCore 的 YAML 驱动 UI 系统」，支持快速热迭代、脚本交互和可选 GPU 渲染优化。
 
 ## 项目定位
 
@@ -13,8 +13,8 @@
 
 ## 技术栈与版本
 
-- Minecraft: `1.21.8`
-- Forge: `58.1.11`
+- Minecraft: `1.21.11`
+- Forge: `61.1.3`
 - Java: `21`
 - 构建工具: Gradle（ForgeGradle 6）
 - 关键依赖：
@@ -34,7 +34,7 @@
 ./gradlew runClient
 ```
 
-Windows 下也可以参考仓库中的 bat 脚本（需自行改 `JAVA_HOME` 路径）：
+Windows 下也可以直接使用仓库中的 bat 脚本。脚本会优先自动探测 `JAVA_HOME`、`PATH` 和常见 JDK 21 安装位置：
 
 - `run_client_java.bat`
 - `run_build.bat`
@@ -154,6 +154,8 @@ src/main/resources/
 - `knowledge_base/changes.md`：迭代记录
 - `knowledge_base/ui_schema.md`：YAML 字段说明
 - `docs/TEXTURE_ATLAS_INSTANCING.md`：图集与实例化渲染实现说明
+- `docs/PROJECT_AUDIT_AND_ROADMAP.md`：模块、调用链、环境修复与内存审计
+- `docs/BEDROCK_MODEL_RENDERING_SPEC.md`：基岩版模型替换实体模型的设计方案、动画和 shader 规范
 
 ## 当前状态与建议
 

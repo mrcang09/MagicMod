@@ -1,6 +1,6 @@
 package org.test.magicmod;
 
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.Item;
 import net.minecraftforge.common.ForgeConfigSpec;
 import net.minecraftforge.eventbus.api.listener.SubscribeEvent;
@@ -36,7 +36,7 @@ public class Config {
     public static Set<Item> items;
 
     private static boolean validateItemName(final Object obj) {
-        return obj instanceof final String itemName && ForgeRegistries.ITEMS.containsKey(ResourceLocation.parse(itemName));
+        return obj instanceof final String itemName && ForgeRegistries.ITEMS.containsKey(Identifier.parse(itemName));
     }
 
     @SubscribeEvent
@@ -46,6 +46,6 @@ public class Config {
         magicNumberIntroduction = MAGIC_NUMBER_INTRODUCTION.get();
 
         // convert the list of strings into a set of items
-        items = ITEM_STRINGS.get().stream().map(itemName -> ForgeRegistries.ITEMS.getValue(ResourceLocation.parse(itemName))).collect(Collectors.toSet());
+        items = ITEM_STRINGS.get().stream().map(itemName -> ForgeRegistries.ITEMS.getValue(Identifier.parse(itemName))).collect(Collectors.toSet());
     }
 }

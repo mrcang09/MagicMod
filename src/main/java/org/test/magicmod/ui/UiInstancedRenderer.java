@@ -15,7 +15,8 @@ import java.util.List;
 public class UiInstancedRenderer {
 
     private static final int VERTEX_SIZE = 5; // position(2) + uv(2) + texIndex(1)
-    private static final int INSTANCE_SIZE = 11; // position(2) + size(2) + uv(4) + color(4) + alpha(1) - actually 13 floats
+    private static final int INSTANCE_SIZE = 13; // position(2) + size(2) + uv(4) + color(4) + alpha(1)
+    private static final int MAX_INSTANCES = 65536;
 
     private int vboId = -1;
     private int vaoId = -1;
@@ -32,6 +33,7 @@ public class UiInstancedRenderer {
             return;
         }
 
+        try {
         // Generate VAO
         vaoId = GL30.glGenVertexArrays();
         GL30.glBindVertexArray(vaoId);
@@ -52,13 +54,16 @@ public class UiInstancedRenderer {
             1.0f, 0.0f,  1.0f, 0.0f, 0.0f   // Top-right
         };
 
-        ByteBuffer buffer = MemoryUtil.memAlloc(quadVertices.length * 4);
-        for (float v : quadVertices) {
-            buffer.putFloat(v);
+        ByteBuffer buffer = MemoryUtil.memAlloc(quadVertices.length * Float.BYTES);
+        try {
+            for (float v : quadVertices) {
+                buffer.putFloat(v);
+            }
+            buffer.flip();
+            GL30.glBufferData(GL30.GL_ARRAY_BUFFER, buffer, GL30.GL_STATIC_DRAW);
+        } finally {
+            MemoryUtil.memFree(buffer);
         }
-        buffer.flip();
-        GL30.glBufferData(GL30.GL_ARRAY_BUFFER, buffer, GL30.GL_STATIC_DRAW);
-        MemoryUtil.memFree(buffer);
 
         // Position attribute (location 0)
         GL30.glVertexAttribPointer(0, 2, GL30.GL_FLOAT, false, VERTEX_SIZE * 4, 0);
@@ -75,7 +80,7 @@ public class UiInstancedRenderer {
         // Create instance VBO
         instanceVboId = GL30.glGenBuffers();
         GL30.glBindBuffer(GL30.GL_ARRAY_BUFFER, instanceVboId);
-        GL30.glBufferData(GL30.GL_ARRAY_BUFFER, 65536 * INSTANCE_SIZE * 4L, GL30.GL_DYNAMIC_DRAW);
+        GL30.glBufferData(GL30.GL_ARRAY_BUFFER, MAX_INSTANCES * INSTANCE_SIZE * (long) Float.BYTES, GL30.GL_DYNAMIC_DRAW);
 
         // Instance attributes (position, size, UV offset/scale, color)
         // Instance position (location 3)
@@ -112,6 +117,10 @@ public class UiInstancedRenderer {
         GL30.glBindVertexArray(0);
 
         initialized = true;
+        } catch (RuntimeException | Error error) {
+            cleanup();
+            throw error;
+        }
     }
 
     /**
@@ -128,6 +137,9 @@ public class UiInstancedRenderer {
     public void addInstance(float x, float y, float width, float height,
                            float u, float v, float u2, float v2,
                            int color, float alpha) {
+        if (instances.size() >= MAX_INSTANCES) {
+            return;
+        }
         float r = ((color >> 16) & 0xFF) / 255.0f;
         float g = ((color >> 8) & 0xFF) / 255.0f;
         float b = (color & 0xFF) / 255.0f;
@@ -147,7 +159,7 @@ public class UiInstancedRenderer {
 
         init(); // Ensure initialized
 
-        int bufferSize = instances.size() * 13 * 4;
+        int bufferSize = instances.size() * INSTANCE_SIZE * Float.BYTES;
         ByteBuffer buffer = MemoryUtil.memAlloc(bufferSize);
 
         try {
@@ -205,10 +217,6 @@ public class UiInstancedRenderer {
      * Cleanup OpenGL resources
      */
     public void cleanup() {
-        if (!initialized) {
-            return;
-        }
-
         if (vboId != -1) {
             GL30.glDeleteBuffers(vboId);
             vboId = -1;
@@ -226,6 +234,7 @@ public class UiInstancedRenderer {
 
         initialized = false;
         instances.clear();
+        dirty = true;
     }
 
     /**

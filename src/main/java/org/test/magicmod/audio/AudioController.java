@@ -1,15 +1,16 @@
 package org.test.magicmod.audio;
 
-import net.minecraft.Util;
+import net.minecraft.resources.Identifier;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.sounds.AbstractSoundInstance;
 import net.minecraft.client.resources.sounds.Sound;
 import net.minecraft.client.resources.sounds.SoundInstance;
 import net.minecraft.client.sounds.SoundManager;
 import net.minecraft.client.sounds.WeighedSoundEvents;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.Util;
 import net.minecraft.util.valueproviders.ConstantFloat;
+import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
 import net.minecraftforge.event.TickEvent;
 import org.test.magicmod.Magicmod;
 
@@ -27,6 +28,7 @@ public final class AudioController {
 
     public static void register() {
         TickEvent.ClientTickEvent.Post.BUS.addListener(AudioController::onClientTick);
+        ClientPlayerNetworkEvent.LoggingOut.BUS.addListener(event -> stopAllMusic());
     }
 
     public static void playMusic(String soundPath, float volume, boolean loop, int stopAtMs) {
@@ -79,7 +81,7 @@ public final class AudioController {
         }
     }
 
-    private static void removeTimedSounds(ResourceLocation eventId) {
+    private static void removeTimedSounds(Identifier eventId) {
         Iterator<TimedSound> iterator = TIMED_SOUNDS.iterator();
         while (iterator.hasNext()) {
             TimedSound entry = iterator.next();
@@ -98,7 +100,7 @@ public final class AudioController {
         String path = value;
         if (value.contains(":")) {
             try {
-                ResourceLocation parsed = ResourceLocation.parse(value);
+                Identifier parsed = Identifier.parse(value);
                 namespace = parsed.getNamespace();
                 path = parsed.getPath();
             } catch (Exception ignored) {
@@ -119,8 +121,8 @@ public final class AudioController {
         }
         String normalized = MUSIC_ROOT + path;
         try {
-            ResourceLocation eventId = ResourceLocation.fromNamespaceAndPath(namespace, normalized);
-            ResourceLocation fileLocation = ResourceLocation.fromNamespaceAndPath(namespace, normalized + ".ogg");
+            Identifier eventId = Identifier.fromNamespaceAndPath(namespace, normalized);
+            Identifier fileLocation = Identifier.fromNamespaceAndPath(namespace, normalized + ".ogg");
             return new ResolvedSound(eventId, fileLocation);
         } catch (Exception ignored) {
             return null;
@@ -131,16 +133,16 @@ public final class AudioController {
         return Math.max(min, Math.min(max, value));
     }
 
-    private record ResolvedSound(ResourceLocation eventId, ResourceLocation fileLocation) {
+    private record ResolvedSound(Identifier eventId, Identifier fileLocation) {
     }
 
-    private record TimedSound(SoundInstance instance, ResourceLocation eventId, long stopAtMs) {
+    private record TimedSound(SoundInstance instance, Identifier eventId, long stopAtMs) {
     }
 
     private static final class DirectSoundInstance extends AbstractSoundInstance {
         private final WeighedSoundEvents events;
 
-        private DirectSoundInstance(ResourceLocation eventId, Sound sound, float volume, boolean loop) {
+        private DirectSoundInstance(Identifier eventId, Sound sound, float volume, boolean loop) {
             super(eventId, SoundSource.MUSIC, SoundInstance.createUnseededRandom());
             this.sound = sound;
             this.events = new WeighedSoundEvents(eventId, null);
@@ -163,15 +165,15 @@ public final class AudioController {
     }
 
     private static final class DirectSound extends Sound {
-        private final ResourceLocation filePath;
+        private final Identifier filePath;
 
-        private DirectSound(ResourceLocation filePath, boolean stream) {
+        private DirectSound(Identifier filePath, boolean stream) {
             super(filePath, ConstantFloat.of(1.0F), ConstantFloat.of(1.0F), 1, Sound.Type.FILE, stream, false, 16);
             this.filePath = filePath;
         }
 
         @Override
-        public ResourceLocation getPath() {
+        public Identifier getPath() {
             return this.filePath;
         }
     }
