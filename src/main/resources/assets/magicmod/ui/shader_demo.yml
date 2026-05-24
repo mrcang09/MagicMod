@@ -1,0 +1,186 @@
+id: "shader_demo"
+title: "Shader Rendering Demo"
+# Enable GPU shader rendering (false = CPU rendering, true = GPU rendering)
+shader_render: true
+allow_move: true
+background:
+  color: "#0d1117"
+  gradient_to: "#161b22"
+elements:
+  # Title - centered horizontally, top vertically
+  - id: "title"
+    type: "text"
+    text: "SHADER DEMO"
+    font: "original"
+    x: "50%"
+    y: "10%"
+    anchor_x: "center"
+    anchor_y: "top"
+    color: "#58a6ff"
+    scale: 2.5
+    shadow: true
+    z: 10
+
+  # Subtitle - using separate anchors for flexible positioning
+  - id: "subtitle"
+    type: "text"
+    text: "GPU-Accelerated UI Rendering"
+    x: "50%"
+    y: "20%"
+    anchor_x: "center"
+    anchor_y: "center"
+    color: "#8b949e"
+    scale: 1.2
+    shadow: false
+    z: 9
+
+  # Left panel - anchored to left-center
+  - id: "left_panel"
+    type: "rect"
+    x: "5%"
+    y: "50%"
+    width: 180
+    height: 250
+    anchor_x: "left"
+    anchor_y: "center"
+    color: "#21262d"
+    z: 1
+
+  - id: "left_title"
+    type: "text"
+    text: "CPU Rendering"
+    x: "5%"
+    y: "35%"
+    anchor_x: "left"
+    anchor_y: "top"
+    color: "#f85149"
+    scale: 1.3
+    z: 2
+
+  - id: "left_desc"
+    type: "text"
+    text: "Traditional rendering\nevery frame on CPU"
+    x: "7%"
+    y: "40%"
+    anchor_x: "left"
+    anchor_y: "top"
+    color: "#c9d1d9"
+    scale: 0.9
+    z: 2
+
+  # Right panel - anchored to right-center
+  - id: "right_panel"
+    type: "rect"
+    x: "95%"
+    y: "50%"
+    width: 180
+    height: 250
+    anchor_x: "right"
+    anchor_y: "center"
+    color: "#21262d"
+    z: 1
+
+  - id: "right_title"
+    type: "text"
+    text: "GPU Rendering"
+    x: "95%"
+    y: "35%"
+    anchor_x: "right"
+    anchor_y: "top"
+    color: "#56d364"
+    scale: 1.3
+    z: 2
+
+  - id: "right_desc"
+    type: "text"
+    text: "Shader-based VBO\nGPU accelerated"
+    x: "93%"
+    y: "40%"
+    anchor_x: "right"
+    anchor_y: "top"
+    color: "#c9d1d9"
+    scale: 0.9
+    z: 2
+
+  # Center image - perfectly centered
+  - id: "icon"
+    type: "image"
+    texture: "minecraft:textures/item/nether_star.png"
+    x: "50%"
+    y: "50%"
+    width: 64
+    height: 64
+    texture_width: 16
+    texture_height: 16
+    anchor_x: "center"
+    anchor_y: "center"
+    opacity: 0.95
+    z: 5
+
+  # Bottom info bar - anchored to bottom-center
+  - id: "info_bar"
+    type: "rect"
+    x: "50%"
+    y: "95%"
+    width: 400
+    height: 30
+    anchor_x: "center"
+    anchor_y: "bottom"
+    color: "#161b22"
+    z: 3
+
+  - id: "info_text"
+    type: "text"
+    text: "Toggle shader_render: true/false in YAML"
+    x: "50%"
+    y: "95%"
+    anchor_x: "center"
+    anchor_y: "bottom"
+    color: "#79c0ff"
+    scale: 1.0
+    z: 4
+
+  # Corner anchors demonstration
+  - id: "corner_tl"
+    type: "rect"
+    x: "2%"
+    y: "2%"
+    width: 10
+    height: 10
+    anchor_x: "left"
+    anchor_y: "top"
+    color: "#ff6b6b"
+    z: 6
+
+  - id: "corner_tr"
+    type: "rect"
+    x: "98%"
+    y: "2%"
+    width: 10
+    height: 10
+    anchor_x: "right"
+    anchor_y: "top"
+    color: "#4ecdc4"
+    z: 6
+
+  - id: "corner_bl"
+    type: "rect"
+    x: "2%"
+    y: "98%"
+    width: 10
+    height: 10
+    anchor_x: "left"
+    anchor_y: "bottom"
+    color: "#95e1d3"
+    z: 6
+
+  - id: "corner_br"
+    type: "rect"
+    x: "98%"
+    y: "98%"
+    width: 10
+    height: 10
+    anchor_x: "right"
+    anchor_y: "bottom"
+    color: "#f38181"
+    z: 6

@@ -1,0 +1,15 @@
+; MagicMod minimal ASCII FBX test mesh.
+; The runtime loader intentionally supports this conservative Vertices +
+; PolygonVertexIndex subset so resource packs can validate FBX replacement
+; without pulling native Assimp into the first runtime pass.
+Objects:  {
+    Geometry: 1, "Geometry::MagicModCube", "Mesh" {
+        Vertices: *24 {
+            a: -0.5,0.0,-0.5, 0.5,0.0,-0.5, 0.5,1.0,-0.5, -0.5,1.0,-0.5,
+               -0.5,0.0,0.5, 0.5,0.0,0.5, 0.5,1.0,0.5, -0.5,1.0,0.5
+        }
+        PolygonVertexIndex: *24 {
+            a: 0,1,2,-4, 5,4,7,-7, 4,0,3,-8, 1,5,6,-3, 3,2,6,-8, 4,5,1,-1
+        }
+    }
+}

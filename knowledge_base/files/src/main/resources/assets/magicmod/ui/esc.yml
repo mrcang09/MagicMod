@@ -1,0 +1,43 @@
+id: "magic_esc"
+title: "Magic Menu"
+override_esc: true
+background:
+  color: "#0f1115"
+  gradient_to: "#1b2330"
+events:
+  esc: "ui.close()"
+elements:
+  - id: "title"
+    type: "text"
+    text: "MAGIC MENU"
+    font: "original"
+    x: "50%"
+    y: "20%"
+    anchor: "center"
+    z: 2
+    color: "#f2c94c"
+    scale: 2.0
+    shadow: true
+  - id: "resume_btn"
+    type: "rect"
+    x: "50%"
+    y: "45%"
+    width: 160
+    height: 26
+    anchor: "center"
+    z: 1
+    color: "#1f2a3a"
+    actions:
+      left_click: "ui.close()"
+      enter: "ui.set('resume_btn', 'color', '#2f3f54')"
+      leave: "ui.set('resume_btn', 'color', '#1f2a3a')"
+  - id: "resume_text"
+    type: "text"
+    text: "Resume"
+    font: "original"
+    x: "50%"
+    y: "45%"
+    anchor: "center"
+    z: 2
+    color: "#d9e2ef"
+    scale: 1.0

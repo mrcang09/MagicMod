@@ -1,0 +1,116 @@
+id: "magic_hud"
+title: "Magic HUD"
+hud: true
+replace_hud: true
+draw_background: false
+elements:
+  - id: "hud_health"
+    type: "text"
+    text: "HP {health}/{max_health}"
+    font: "original"
+    x: 8
+    y: "h - 70"
+    z: 5
+    color: "#ffffff"
+    scale: 1.0
+    shadow: true
+  - id: "hud_food"
+    type: "text"
+    text: "Food {food}"
+    font: "original"
+    x: 8
+    y: "h - 58"
+    z: 5
+    color: "#ffffff"
+    scale: 1.0
+    shadow: true
+  - id: "hud_xp"
+    type: "text"
+    text: "XP Lv {exp_level} ({exp}%)"
+    font: "original"
+    x: 8
+    y: "h - 46"
+    z: 5
+    color: "#ffffff"
+    scale: 1.0
+    shadow: true
+  - id: "hotbar_slot_0"
+    type: "slot"
+    slot: 0
+    x: "0.5*w - 98"
+    y: "h - 24"
+    width: 20
+    height: 20
+    z: 1
+  - id: "hotbar_slot_1"
+    type: "slot"
+    slot: 1
+    x: "0.5*w - 76"
+    y: "h - 24"
+    width: 20
+    height: 20
+    z: 1
+  - id: "hotbar_slot_2"
+    type: "slot"
+    slot: 2
+    x: "0.5*w - 54"
+    y: "h - 24"
+    width: 20
+    height: 20
+    z: 1
+  - id: "hotbar_slot_3"
+    type: "slot"
+    slot: 3
+    x: "0.5*w - 32"
+    y: "h - 24"
+    width: 20
+    height: 20
+    z: 1
+  - id: "hotbar_slot_4"
+    type: "slot"
+    slot: 4
+    x: "0.5*w - 10"
+    y: "h - 24"
+    width: 20
+    height: 20
+    z: 1
+  - id: "hotbar_slot_5"
+    type: "slot"
+    slot: 5
+    x: "0.5*w + 12"
+    y: "h - 24"
+    width: 20
+    height: 20
+    z: 1
+  - id: "hotbar_slot_6"
+    type: "slot"
+    slot: 6
+    x: "0.5*w + 34"
+    y: "h - 24"
+    width: 20
+    height: 20
+    z: 1
+  - id: "hotbar_slot_7"
+    type: "slot"
+    slot: 7
+    x: "0.5*w + 56"
+    y: "h - 24"
+    width: 20
+    height: 20
+    z: 1
+  - id: "hotbar_slot_8"
+    type: "slot"
+    slot: 8
+    x: "0.5*w + 78"
+    y: "h - 24"
+    width: 20
+    height: 20
+    z: 1
+  - id: "offhand_slot"
+    type: "slot"
+    slot: 40
+    x: "0.5*w + 104"
+    y: "h - 24"
+    width: 20
+    height: 20
+    z: 1

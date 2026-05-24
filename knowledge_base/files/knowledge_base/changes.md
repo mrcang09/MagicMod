@@ -1,0 +1,29 @@
+# Change Notes
+
+- Fixed item registration ids for `example_block` and `example_item` in `src/main/java/org/test/magicmod/Magicmod.java`.
+- Added example block blockstate and model files under `src/main/resources/assets/magicmod/`.
+- Bumped Forge to `58.1.11` in `gradle.properties`.
+- Added YAML-driven UI loader and render system (see `src/main/java/org/test/magicmod/ui/`).
+- Added `/open <ui.yml>` client command to open YAML-defined screens.
+- Added sample UI config at `src/main/resources/assets/magicmod/ui/loading.yml`.
+- Added SnakeYAML dependency in `build.gradle` for parsing.
+- Added expression support for x/y (use `w` and `h` in UI YAML).
+- Added text `font` support with `original` or resource font ids.
+- Simplified YAML loader to use default SnakeYAML constructor.
+- Added `scroll`/`scroll_list` component with nested children and wheel scrolling.
+- Added JS actions for click events and element visibility toggles.
+- Added slot rendering for container overlays, plus inventory/chest overlay configs.
+- Added GIF rendering for `image` elements.
+- Added Rhino JS engine dependency for action scripts.
+- Added mixin replacement render to hide vanilla inventory/chest UI when desired.
+- Added `replace_vanilla` and `match_titles` in UI configs for targeted container overlays.
+- Scaled slot rendering to respect configured width/height.
+- Added inventory render cancellation mixin and slot hover mask support.
+- Added Render.Pre cancellation path to fully suppress vanilla screen render when replace_vanilla is true.
+- Added UI open/close events and JS audio playback helpers.
+- Moved UI audio playback into the `audio` module with direct OGG paths under `assets/magicmod/music/` (no `sounds.json`).
+- Added hover actions (`enter`/`leave`), `allow_move`/`override_esc` support, and JS setters for element properties.
+- Added `esc.yml` to replace the pause menu when in-world.
+- Added HUD replacement support (`hud.yml`), HUD stat tokens, and JS helpers for player/target data.
+- Fixed `allow_move` to keep movement keybindings active while a UI is open.
+- Added element opacity for `text` and `image` plus UI animation definitions (`animations`, `open_animation`) and JS playback helpers.
